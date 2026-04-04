@@ -1,0 +1,73 @@
+#include "gfx.h"
+#include "font8x8_basic.h"
+#include <string.h>
+
+int gfxWidth  = 0;
+int gfxHeight = 0;
+
+static HDC       g_backDC;
+static HBITMAP   g_backBmp;
+static uint32_t* g_pixels;
+
+void gfxInit(HWND hwnd, int w, int h) {
+    gfxWidth  = w;
+    gfxHeight = h;
+
+    HDC hdc  = GetDC(hwnd);
+    g_backDC = CreateCompatibleDC(hdc);
+    ReleaseDC(hwnd, hdc);
+
+    BITMAPINFO bmi = {0};
+    bmi.bmiHeader.biSize        = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth       = w;
+    bmi.bmiHeader.biHeight      = -h;
+    bmi.bmiHeader.biPlanes      = 1;
+    bmi.bmiHeader.biBitCount    = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    g_backBmp = CreateDIBSection(g_backDC, &bmi, DIB_RGB_COLORS, (void**)&g_pixels, NULL, 0);
+    SelectObject(g_backDC, g_backBmp);
+}
+
+void gfxPresent(HWND hwnd) {
+    HDC hdc = GetDC(hwnd);
+    BitBlt(hdc, 0, 0, gfxWidth, gfxHeight, g_backDC, 0, 0, SRCCOPY);
+    ReleaseDC(hwnd, hdc);
+}
+
+void gfxShutdown(void) {
+    DeleteObject(g_backBmp);
+    DeleteDC(g_backDC);
+}
+
+uint32_t rgb(uint8_t r, uint8_t g, uint8_t b) {
+    return ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+}
+
+void fillRect(int x, int y, int w, int h, uint32_t color) {
+    int x1 = x < 0 ? 0 : x;
+    int y1 = y < 0 ? 0 : y;
+    int x2 = (x + w) > gfxWidth  ? gfxWidth  : (x + w);
+    int y2 = (y + h) > gfxHeight ? gfxHeight : (y + h);
+    for (int py = y1; py < y2; py++)
+        for (int px = x1; px < x2; px++)
+            g_pixels[py * gfxWidth + px] = color;
+}
+
+void clearScreen(void) {
+    memset(g_pixels, 0, (size_t)gfxWidth * gfxHeight * 4);
+}
+
+static void drawChar(int x, int y, char c, uint32_t color, int scale) {
+    if ((unsigned char)c >= 128) return;
+    const unsigned char* glyph = font8x8_basic[(unsigned char)c];
+    for (int row = 0; row < 8; row++)
+        for (int col = 0; col < 8; col++)
+            if ((glyph[row] >> col) & 1)
+                fillRect(x + col * scale, y + row * scale, scale, scale, color);
+}
+
+void drawText(int x, int y, const char* text, uint32_t color, int scale) {
+    for (int i = 0; text[i]; i++)
+        drawChar(x + i * 8 * scale, y, text[i], color, scale);
+}

@@ -1,19 +1,17 @@
 #pragma once
-#include <vector>
-#include <cstdint>
+#include <stdint.h>
+#include "pak.h"
 
-struct PlayerData {
+typedef struct {
     uint8_t maxHp;
     uint8_t attack;
     uint8_t defense;
-
     uint8_t weaponId;
     uint8_t armorId;
-
     uint8_t abilityCount;
     uint8_t abilities[8];
-};
+} PlayerData;
 
 extern PlayerData player;
 
-bool loadPlayer(const std::vector<uint8_t>& data);
+int loadPlayer(PakData data);

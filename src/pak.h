@@ -1,15 +1,18 @@
 #pragma once
-#include <vector>
-#include <string>
-#include <cstdint>
+#include <stdint.h>
 
-struct PakEntry {
-    char name[32];
+typedef struct {
+    char     name[32];
     uint32_t offset;
     uint32_t size;
-};
+} PakEntry;
 
-bool pakOpen(const char* filename);
-const PakEntry* pakFind(const std::string& name);
-std::vector<uint8_t> pakRead(const std::string& name);
-void pakClose();
+typedef struct {
+    uint8_t* data;
+    uint32_t size;
+} PakData;
+
+int             pakOpen(const char* filename);
+const PakEntry* pakFind(const char* name);
+PakData         pakRead(const char* name);
+void            pakClose(void);

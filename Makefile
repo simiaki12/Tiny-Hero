@@ -1,25 +1,28 @@
-CXX = g++
-CXXFLAGS = -Wall -Wextra -std=c++17
-DEBUGFLAGS = -g
-RELEASEFLAGS = -Os -fno-exceptions -fno-rtti
-LDFLAGS = -s
-SDLFLAGS = $(shell sdl2-config --cflags --libs)
+CC       = x86_64-w64-mingw32-gcc
+CXX_HOST = g++
+CFLAGS   = -Wall -Wextra -std=c11
+DEBUGFLAGS   = -g
+RELEASEFLAGS = -Os -flto
+LDFLAGS        = -lgdi32 -mwindows
+LDFLAGS_STATIC = $(LDFLAGS) -static-libgcc
 
-SRC = $(wildcard src/*.cpp src/*/*.cpp)
-OUT = build/game
+SRC    = $(wildcard src/*.c)
+OUT    = build/game.exe
 PACKER = build/packer
 
+MINGW_DLL_DIR = /usr/lib/gcc/x86_64-w64-mingw32/10-win32
+
 debug: pack
-	$(CXX) $(CXXFLAGS) $(DEBUGFLAGS) $(SRC) -o $(OUT) $(SDLFLAGS)
+	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(SRC) -o $(OUT) $(LDFLAGS)
+	cp $(MINGW_DLL_DIR)/libgcc_s_seh-1.dll build/
 
 release: pack
-	$(CXX) $(CXXFLAGS) $(RELEASEFLAGS) $(SRC) -o $(OUT) $(SDLFLAGS) $(LDFLAGS)
-	strip $(OUT)
+	$(CC) $(CFLAGS) $(RELEASEFLAGS) $(SRC) -o $(OUT) $(LDFLAGS_STATIC) -s
 	ls -lh $(OUT)
 
 packer:
 	mkdir -p build
-	$(CXX) -std=c++17 -Os tools/packer.cpp -o $(PACKER)
+	$(CXX_HOST) -std=c++17 -Os tools/packer.cpp -o $(PACKER)
 
 pack: packer
 	$(PACKER)

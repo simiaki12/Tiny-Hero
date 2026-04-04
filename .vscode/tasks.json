@@ -12,6 +12,16 @@
       "type": "shell",
       "command": "echo BUILDING... && make release",
       "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "build-and-run",
+      "type": "shell",
+      "command": "make debug && WINEDEBUG=-all wine build/game.exe",
+      "problemMatcher": ["$gcc"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
     }
   ]
 }

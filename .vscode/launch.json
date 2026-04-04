@@ -5,7 +5,7 @@
       "name": "Run Game (Release)",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build/game",
+      "program": "${workspaceFolder}/build/game.exe",
       "cwd": "${workspaceFolder}",
       "MIMode": "gdb",
       "miDebuggerPath": "/usr/bin/gdb",
