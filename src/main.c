@@ -7,6 +7,8 @@
 #include "pak.h"
 #include "player.h"
 #include "gfx.h"
+#include "game.h"
+#include "combat.h"
 
 #define TILE_SIZE     32
 #define MAX_MAP_TILES (256 * 256)
@@ -21,8 +23,7 @@ static uint8_t mapLoc[MAX_MAP_TILES];
 static int playerX = 2, playerY = 2;
 
 /* State machine */
-typedef enum { STATE_WORLD, STATE_COMBAT, STATE_MENU, STATE_DIALOG, STATE_DUNGEON } GameState;
-static GameState state = STATE_WORLD;
+GameState state = STATE_WORLD;
 
 typedef enum { LOC_EMPTY = 0, LOC_ENEMY = 1, LOC_TOWN = 2, LOC_DUNGEON = 3 } LocType;
 
@@ -60,13 +61,12 @@ static void handleWorldInput(int key) {
         playerY = newY;
 
         LocType loc = (LocType)mapLoc[newY * mapWidth + newX];
-        if (loc == LOC_ENEMY)   state = STATE_COMBAT;
+        if (loc == LOC_ENEMY)   startCombat();
         if (loc == LOC_TOWN)    state = STATE_DIALOG;
         if (loc == LOC_DUNGEON) state = STATE_DUNGEON;
     }
 }
 
-static void handleCombatInput(int key)  { if (key == VK_ESCAPE) state = STATE_WORLD; }
 static void handleMenuInput(int key)    { if (key == VK_ESCAPE) state = STATE_WORLD; }
 static void handleDialogInput(int key)  { if (key == VK_ESCAPE) state = STATE_WORLD; }
 static void handleDungeonInput(int key) { if (key == VK_ESCAPE) state = STATE_WORLD; }
@@ -93,9 +93,12 @@ static void renderWorld(void) {
     fillRect(playerX * TILE_SIZE, playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE, rgb(200, 50, 50));
 }
 
-static void renderCombat(void) {
-    /* Placeholder — combat system coming soon */
-    fillRect(40, 40, gfxWidth - 80, gfxHeight - 80, rgb(80, 20, 20));
+static const char *abilityName(uint8_t id) {
+    switch (id) {
+        case ABILITY_HEAL:   return "Heal";
+        case ABILITY_STRONG: return "Strong";
+        default:             return "???";
+    }
 }
 
 static void renderMenu(void) {
@@ -107,7 +110,7 @@ static void renderMenu(void) {
 
     drawText(x, y, "STATS", rgb(220, 220, 255), 2); y += lineH + 4;
 
-    snprintf(buf, sizeof(buf), "HP:  %d", player.maxHp);
+    snprintf(buf, sizeof(buf), "HP:  %d / %d", playerHp, player.maxHp);
     drawText(x, y, buf, rgb(100, 220, 100), 2); y += lineH;
 
     snprintf(buf, sizeof(buf), "ATK: %d", player.attack);
@@ -118,13 +121,14 @@ static void renderMenu(void) {
 
     snprintf(buf, sizeof(buf), "WPN: %d", player.weaponId);
     drawText(x, y, buf, rgb(200, 200, 100), 2); y += lineH;
+
     snprintf(buf, sizeof(buf), "ARM: %d", player.armorId);
     drawText(x, y, buf, rgb(200, 200, 100), 2); y += lineH + 4;
 
     if (player.abilityCount > 0) {
         drawText(x, y, "ABILITIES:", rgb(180, 120, 220), 2); y += lineH;
         for (int i = 0; i < player.abilityCount && i < 8; i++) {
-            snprintf(buf, sizeof(buf), "  %d", player.abilities[i]);
+            snprintf(buf, sizeof(buf), "  %s", abilityName(player.abilities[i]));
             drawText(x, y, buf, rgb(180, 120, 220), 2); y += lineH;
         }
     }
@@ -176,6 +180,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
     if (!loadMap(mapData) || !loadPlayer(playerData)) return 1;
     free(mapData.data);
     free(playerData.data);
+    playerHp = player.maxHp;
 
     int screenW = mapWidth  * TILE_SIZE;
     int screenH = mapHeight * TILE_SIZE;

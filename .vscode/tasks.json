@@ -14,7 +14,7 @@
     {
       "label": "build-release",
       "type": "shell",
-      "command": "make release",
+      "command": "make release && WINEDEBUG=-all wine build/game.exe",
       "problemMatcher": ["$gcc"]
     }
   ]

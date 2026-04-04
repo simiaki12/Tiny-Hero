@@ -13,5 +13,6 @@ typedef struct {
 } PlayerData;
 
 extern PlayerData player;
+extern int playerHp;
 
 int loadPlayer(PakData data);
