@@ -10,11 +10,8 @@ SRC    = $(wildcard src/*.c)
 OUT    = build/game.exe
 PACKER = build/packer
 
-MINGW_DLL_DIR = /usr/lib/gcc/x86_64-w64-mingw32/10-win32
-
 debug: pack
 	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(SRC) -o $(OUT) $(LDFLAGS)
-	cp $(MINGW_DLL_DIR)/libgcc_s_seh-1.dll build/
 
 release: pack
 	$(CC) $(CFLAGS) $(RELEASEFLAGS) $(SRC) -o $(OUT) $(LDFLAGS_STATIC) -s

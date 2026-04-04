@@ -2,18 +2,6 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "build-debug",
-      "type": "shell",
-      "command": "echo BUILDING... && make debug",
-      "problemMatcher": ["$gcc"]
-    },
-    {
-      "label": "build-release",
-      "type": "shell",
-      "command": "echo BUILDING... && make release",
-      "problemMatcher": ["$gcc"]
-    },
-    {
       "label": "build-and-run",
       "type": "shell",
       "command": "make debug && WINEDEBUG=-all wine build/game.exe",
@@ -22,6 +10,12 @@
         "kind": "build",
         "isDefault": true
       }
+    },
+    {
+      "label": "build-release",
+      "type": "shell",
+      "command": "make release",
+      "problemMatcher": ["$gcc"]
     }
   ]
 }
