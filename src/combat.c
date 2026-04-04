@@ -4,6 +4,7 @@
 #include "combat.h"
 #include "game.h"
 #include "player.h"
+#include "items.h"
 #include "gfx.h"
 
 CombatState combat;
@@ -35,8 +36,8 @@ void startCombat(void) {
 static void performPlayerAction(void) {
     Action *a = &combat.actions[combat.selectedIndex];
     switch (a->type) {
-        case ACTION_ATTACK: combat.enemy.hp -= player.attack;            break;
-        case ACTION_STRONG: combat.enemy.hp -= player.attack + a->power; break;
+        case ACTION_ATTACK: combat.enemy.hp -= getAttack();            break;
+        case ACTION_STRONG: combat.enemy.hp -= getAttack() + a->power; break;
         case ACTION_HEAL:
             playerHp += a->power;
             if (playerHp > player.maxHp) playerHp = player.maxHp;

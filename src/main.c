@@ -6,11 +6,13 @@
 #include <string.h>
 #include "pak.h"
 #include "player.h"
+#include "items.h"
 #include "gfx.h"
 #include "game.h"
 #include "combat.h"
+#include "town.h"
 
-#define TILE_SIZE     32
+#define TILE_SIZE     64
 #define MAX_MAP_TILES (256 * 256)
 
 /* Map */
@@ -62,13 +64,32 @@ static void handleWorldInput(int key) {
 
         LocType loc = (LocType)mapLoc[newY * mapWidth + newX];
         if (loc == LOC_ENEMY)   startCombat();
-        if (loc == LOC_TOWN)    state = STATE_DIALOG;
+        if (loc == LOC_TOWN)    startTown();
         if (loc == LOC_DUNGEON) state = STATE_DUNGEON;
     }
 }
 
-static void handleMenuInput(int key)    { if (key == VK_ESCAPE) state = STATE_WORLD; }
-static void handleDialogInput(int key)  { if (key == VK_ESCAPE) state = STATE_WORLD; }
+static void handleMenuInput(int key) {
+    switch (key) {
+        case VK_UP:
+            inventory.selected--;
+            if (inventory.selected < 0)
+                inventory.selected = inventory.count > 0 ? inventory.count - 1 : 0;
+            break;
+        case VK_DOWN:
+            if (inventory.count > 0)
+                inventory.selected = (inventory.selected + 1) % inventory.count;
+            break;
+        case VK_RETURN:
+            if (inventory.count > 0)
+                useOrEquipItem(inventory.selected);
+            break;
+        case VK_ESCAPE:
+            state = STATE_WORLD;
+            break;
+    }
+}
+
 static void handleDungeonInput(int key) { if (key == VK_ESCAPE) state = STATE_WORLD; }
 
 /* --- Render --- */
@@ -93,50 +114,80 @@ static void renderWorld(void) {
     fillRect(playerX * TILE_SIZE, playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE, rgb(200, 50, 50));
 }
 
-static const char *abilityName(uint8_t id) {
-    switch (id) {
-        case ABILITY_HEAL:   return "Heal";
-        case ABILITY_STRONG: return "Strong";
-        default:             return "???";
-    }
-}
-
 static void renderMenu(void) {
-    fillRect(40, 40, gfxWidth - 80, gfxHeight - 80, rgb(20, 20, 80));
+    int x = 60, y = 55;
+    const int lineH = 22;
+    char buf[48];
+    int i;
 
-    int x = 60, y = 60;
-    const int lineH = 20;
-    char buf[32];
+    fillRect(40, 40, gfxWidth - 80, gfxHeight - 80, rgb(10, 20, 50));
+    drawText(x, y, "INVENTORY", rgb(220, 220, 255), 2);
+    y += lineH + 4;
 
-    drawText(x, y, "STATS", rgb(220, 220, 255), 2); y += lineH + 4;
+    if (inventory.count == 0) {
+        drawText(x, y, "  (empty)", rgb(120, 120, 120), 2);
+    } else {
+        for (i = 0; i < inventory.count; i++) {
+            uint8_t id      = inventory.items[i];
+            int     sel     = (i == inventory.selected);
+            uint32_t color  = sel ? rgb(255, 255, 100) : rgb(180, 180, 180);
 
-    snprintf(buf, sizeof(buf), "HP:  %d / %d", playerHp, player.maxHp);
-    drawText(x, y, buf, rgb(100, 220, 100), 2); y += lineH;
+            snprintf(buf, sizeof(buf), "%s%-10s",
+                sel ? "> " : "  ",
+                itemName(id));
 
-    snprintf(buf, sizeof(buf), "ATK: %d", player.attack);
-    drawText(x, y, buf, rgb(220, 100, 100), 2); y += lineH;
+            /* Show (E) for currently equipped items */
+            if (id == player.weaponId || id == player.armorId) {
+                size_t len = strlen(buf);
+                buf[len]   = ' ';
+                buf[len+1] = '(';
+                buf[len+2] = 'E';
+                buf[len+3] = ')';
+                buf[len+4] = '\0';
+            }
 
-    snprintf(buf, sizeof(buf), "DEF: %d", player.defense);
-    drawText(x, y, buf, rgb(100, 160, 220), 2); y += lineH;
-
-    snprintf(buf, sizeof(buf), "WPN: %d", player.weaponId);
-    drawText(x, y, buf, rgb(200, 200, 100), 2); y += lineH;
-
-    snprintf(buf, sizeof(buf), "ARM: %d", player.armorId);
-    drawText(x, y, buf, rgb(200, 200, 100), 2); y += lineH + 4;
-
-    if (player.abilityCount > 0) {
-        drawText(x, y, "ABILITIES:", rgb(180, 120, 220), 2); y += lineH;
-        for (int i = 0; i < player.abilityCount && i < 8; i++) {
-            snprintf(buf, sizeof(buf), "  %s", abilityName(player.abilities[i]));
-            drawText(x, y, buf, rgb(180, 120, 220), 2); y += lineH;
+            drawText(x, y, buf, color, 2);
+            y += lineH;
         }
     }
-}
 
-static void renderDialog(void) {
-    /* Placeholder — dialog system coming soon */
-    fillRect(40, 40, gfxWidth - 80, gfxHeight - 80, rgb(150, 120, 0));
+    /* Divider */
+    int divY = y + 6;
+    fillRect(x, divY, gfxWidth - 120, 1, rgb(60, 60, 100));
+    y = divY + 10;
+
+    /* Item info for selected */
+    if (inventory.count > 0) {
+        uint8_t id = inventory.items[inventory.selected];
+        int preAtk, preDef, preHp;
+        getPreviewStats(id, &preAtk, &preDef, &preHp);
+
+        drawText(x, y, itemDesc(id), rgb(160, 200, 255), 2);
+        y += lineH + 2;
+
+        int curAtk = getAttack();
+        int curDef = getDefense();
+
+        if (preAtk != curAtk)
+            snprintf(buf, sizeof(buf), "ATK: %d -> %d", curAtk, preAtk);
+        else
+            snprintf(buf, sizeof(buf), "ATK: %d", curAtk);
+        drawText(x, y, buf, rgb(220, 100, 100), 2);
+        y += lineH;
+
+        if (preDef != curDef)
+            snprintf(buf, sizeof(buf), "DEF: %d -> %d", curDef, preDef);
+        else
+            snprintf(buf, sizeof(buf), "DEF: %d", curDef);
+        drawText(x, y, buf, rgb(100, 160, 220), 2);
+        y += lineH;
+
+        if (preHp != playerHp)
+            snprintf(buf, sizeof(buf), "HP:  %d -> %d / %d", playerHp, preHp, player.maxHp);
+        else
+            snprintf(buf, sizeof(buf), "HP:  %d / %d", playerHp, player.maxHp);
+        drawText(x, y, buf, rgb(100, 220, 100), 2);
+    }
 }
 
 static void renderDungeon(void) {
@@ -175,11 +226,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
 
     PakData mapData    = pakRead("assets/map1.bin");
     PakData playerData = pakRead("assets/player.dat");
+    PakData itemData   = pakRead("assets/items.dat");
     pakClose();
 
     if (!loadMap(mapData) || !loadPlayer(playerData)) return 1;
+    loadItems(itemData);  /* optional — falls back to builtins if not in pak */
+
     free(mapData.data);
     free(playerData.data);
+    free(itemData.data);
     playerHp = player.maxHp;
 
     int screenW = mapWidth  * TILE_SIZE;
@@ -218,9 +273,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
             switch (state) {
                 case STATE_WORLD:   handleWorldInput(g_pendingKey);   break;
                 case STATE_COMBAT:  handleCombatInput(g_pendingKey);  break;
-                case STATE_MENU:    handleMenuInput(g_pendingKey);     break;
+                case STATE_MENU:    handleMenuInput(g_pendingKey);    break;
                 case STATE_DIALOG:  handleDialogInput(g_pendingKey);  break;
                 case STATE_DUNGEON: handleDungeonInput(g_pendingKey); break;
+                case STATE_TOWN:    handleTownInput(g_pendingKey);    break;
             }
             g_pendingKey = 0;
         }
@@ -232,6 +288,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
             case STATE_MENU:    renderMenu();    break;
             case STATE_DIALOG:  renderDialog();  break;
             case STATE_DUNGEON: renderDungeon(); break;
+            case STATE_TOWN:    renderTown();    break;
         }
 
         gfxPresent(g_hwnd);
