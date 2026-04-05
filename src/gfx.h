@@ -6,6 +6,7 @@
 extern int gfxWidth, gfxHeight;
 
 void     gfxInit(HWND hwnd, int w, int h);
+void     gfxResize(int w, int h);
 void     gfxPresent(HWND hwnd);
 void     gfxShutdown(void);
 

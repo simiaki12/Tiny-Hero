@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include "pak.h"
+#include "skills.h"
 
 typedef struct {
     uint8_t maxHp;
@@ -9,7 +10,8 @@ typedef struct {
     uint8_t weaponId;
     uint8_t armorId;
     uint8_t abilityCount;
-    uint8_t abilities[8];
+    uint8_t abilities[8];   /* legacy — replaced by skills in step 2 */
+    uint8_t skills[SKILL_MAX];
 } PlayerData;
 
 extern PlayerData player;

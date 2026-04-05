@@ -35,6 +35,26 @@ void gfxPresent(HWND hwnd) {
     ReleaseDC(hwnd, hdc);
 }
 
+void gfxResize(int w, int h) {
+    if (w <= 0 || h <= 0 || !g_backDC) return;
+    SelectObject(g_backDC, (HGDIOBJ)GetStockObject(NULL_BRUSH));
+    DeleteObject(g_backBmp);
+
+    gfxWidth  = w;
+    gfxHeight = h;
+
+    BITMAPINFO bmi = {0};
+    bmi.bmiHeader.biSize        = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth       = w;
+    bmi.bmiHeader.biHeight      = -h;
+    bmi.bmiHeader.biPlanes      = 1;
+    bmi.bmiHeader.biBitCount    = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    g_backBmp = CreateDIBSection(g_backDC, &bmi, DIB_RGB_COLORS, (void**)&g_pixels, NULL, 0);
+    SelectObject(g_backDC, g_backBmp);
+}
+
 void gfxShutdown(void) {
     DeleteObject(g_backBmp);
     DeleteDC(g_backDC);

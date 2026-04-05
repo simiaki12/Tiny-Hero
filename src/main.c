@@ -11,63 +11,15 @@
 #include "game.h"
 #include "combat.h"
 #include "town.h"
-
-#define TILE_SIZE     64
-#define MAX_MAP_TILES (256 * 256)
-
-/* Map */
-static int     mapWidth  = 0;
-static int     mapHeight = 0;
-static uint8_t mapGfx[MAX_MAP_TILES];
-static uint8_t mapLoc[MAX_MAP_TILES];
-
-/* Player position */
-static int playerX = 2, playerY = 2;
+#include "world.h"
+#include "skills.h"
 
 /* State machine */
 GameState state = STATE_WORLD;
 
-typedef enum { LOC_EMPTY = 0, LOC_ENEMY = 1, LOC_TOWN = 2, LOC_DUNGEON = 3 } LocType;
-
-static int loadMap(PakData data) {
-    if (data.size < 2) return 0;
-    mapWidth  = data.data[0];
-    mapHeight = data.data[1];
-    int n = mapWidth * mapHeight;
-    if ((int)data.size < 2 + n * 2) return 0;
-    memcpy(mapGfx, data.data + 2,     n);
-    memcpy(mapLoc, data.data + 2 + n, n);
-    return 1;
-}
-
 /* --- Input --- */
 
 static int g_pendingKey = 0;
-
-static void handleWorldInput(int key) {
-    if (key == 'I') { state = STATE_MENU; return; }
-
-    int newX = playerX, newY = playerY;
-    switch (key) {
-        case VK_UP:    newY--; break;
-        case VK_DOWN:  newY++; break;
-        case VK_LEFT:  newX--; break;
-        case VK_RIGHT: newX++; break;
-        default: return;
-    }
-
-    if (newX >= 0 && newX < mapWidth &&
-        newY >= 0 && newY < mapHeight &&
-        mapGfx[newY * mapWidth + newX] == 0) {
-        playerX = newX;
-        playerY = newY;
-
-        LocType loc = (LocType)mapLoc[newY * mapWidth + newX];
-        if (loc == LOC_ENEMY)   startCombat();
-        if (loc == LOC_TOWN)    startTown();
-        if (loc == LOC_DUNGEON) state = STATE_DUNGEON;
-    }
-}
 
 static void handleMenuInput(int key) {
     switch (key) {
@@ -93,26 +45,6 @@ static void handleMenuInput(int key) {
 static void handleDungeonInput(int key) { if (key == VK_ESCAPE) state = STATE_WORLD; }
 
 /* --- Render --- */
-
-static void renderWorld(void) {
-    for (int y = 0; y < mapHeight; y++) {
-        for (int x = 0; x < mapWidth; x++) {
-            uint32_t color;
-            if (mapGfx[y * mapWidth + x] == 1) {
-                color = rgb(100, 100, 100);
-            } else {
-                switch ((LocType)mapLoc[y * mapWidth + x]) {
-                    case LOC_ENEMY:   color = rgb(120,  30,  30); break;
-                    case LOC_TOWN:    color = rgb(150, 120,   0); break;
-                    case LOC_DUNGEON: color = rgb( 80,   0,  80); break;
-                    default:          color = rgb(  0, 100,   0); break;
-                }
-            }
-            fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, color);
-        }
-    }
-    fillRect(playerX * TILE_SIZE, playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE, rgb(200, 50, 50));
-}
 
 static void renderMenu(void) {
     int x = 60, y = 55;
@@ -205,6 +137,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         case WM_KEYDOWN:
             g_pendingKey = (int)wp;
             return 0;
+        case WM_SIZE:
+            gfxResize((int)LOWORD(lp), (int)HIWORD(lp));
+            worldUpdateCamera();
+            return 0;
         case WM_PAINT: {
             PAINTSTRUCT ps;
             BeginPaint(hwnd, &ps);
@@ -224,21 +160,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
 
     if (!pakOpen("data.pak")) return 1;
 
-    PakData mapData    = pakRead("assets/map1.bin");
     PakData playerData = pakRead("assets/player.dat");
     PakData itemData   = pakRead("assets/items.dat");
-    pakClose();
 
-    if (!loadMap(mapData) || !loadPlayer(playerData)) return 1;
+    if (!loadPlayer(playerData)) { pakClose(); return 1; }
     loadItems(itemData);  /* optional — falls back to builtins if not in pak */
-
-    free(mapData.data);
     free(playerData.data);
     free(itemData.data);
-    playerHp = player.maxHp;
 
-    int screenW = mapWidth  * TILE_SIZE;
-    int screenH = mapHeight * TILE_SIZE;
+    const int screenW = 640;
+    const int screenH = 480;
 
     WNDCLASSA wc = {0};
     wc.lpfnWndProc   = WndProc;
@@ -252,13 +183,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
 
     g_hwnd = CreateWindowA(
         "TinyHero", "smolhero",
-        WS_OVERLAPPEDWINDOW & ~WS_THICKFRAME & ~WS_MAXIMIZEBOX,
+        WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT,
         wr.right - wr.left, wr.bottom - wr.top,
         NULL, NULL, hInstance, NULL
     );
 
     gfxInit(g_hwnd, screenW, screenH);
+
+    if (!worldLoadNamed("assets/map1.bin")) { pakClose(); gfxShutdown(); return 1; }
+    playerHp = player.maxHp;
+    /* pak stays open for dynamic map loading during gameplay */
+
     ShowWindow(g_hwnd, nCmdShow);
 
     MSG msg;
@@ -270,13 +206,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
         }
 
         if (g_pendingKey) {
-            switch (state) {
-                case STATE_WORLD:   handleWorldInput(g_pendingKey);   break;
-                case STATE_COMBAT:  handleCombatInput(g_pendingKey);  break;
-                case STATE_MENU:    handleMenuInput(g_pendingKey);    break;
-                case STATE_DIALOG:  handleDialogInput(g_pendingKey);  break;
-                case STATE_DUNGEON: handleDungeonInput(g_pendingKey); break;
-                case STATE_TOWN:    handleTownInput(g_pendingKey);    break;
+            /* P is a global hotkey — opens skills from world, closes from skills */
+            if (g_pendingKey == 'P' && (state == STATE_WORLD || state == STATE_SKILLS)) {
+                state = (state == STATE_SKILLS) ? STATE_WORLD : STATE_SKILLS;
+            } else {
+                switch (state) {
+                    case STATE_WORLD:   handleWorldInput(g_pendingKey);   break;
+                    case STATE_COMBAT:  handleCombatInput(g_pendingKey);  break;
+                    case STATE_MENU:    handleMenuInput(g_pendingKey);    break;
+                    case STATE_SKILLS:  handleSkillsInput(g_pendingKey);  break;
+                    case STATE_DIALOG:  handleDialogInput(g_pendingKey);  break;
+                    case STATE_DUNGEON: handleDungeonInput(g_pendingKey); break;
+                    case STATE_TOWN:    handleTownInput(g_pendingKey);    break;
+                }
             }
             g_pendingKey = 0;
         }
@@ -286,6 +228,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
             case STATE_WORLD:   renderWorld();   break;
             case STATE_COMBAT:  renderCombat();  break;
             case STATE_MENU:    renderMenu();    break;
+            case STATE_SKILLS:  renderSkills();  break;
             case STATE_DIALOG:  renderDialog();  break;
             case STATE_DUNGEON: renderDungeon(); break;
             case STATE_TOWN:    renderTown();    break;
@@ -295,6 +238,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
         Sleep(16);
     }
 
+    pakClose();
     gfxShutdown();
     return 0;
 }
