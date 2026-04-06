@@ -1,5 +1,6 @@
 #include "items.h"
 #include "player.h"
+#include "quests.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -94,6 +95,13 @@ void getPreviewStats(uint8_t id, int *atkOut, int *defOut, int *hpOut) {
         *hpOut += 10;
         if (*hpOut > player.maxHp) *hpOut = player.maxHp;
     }
+}
+
+int addItem(uint8_t id) {
+    if (inventory.count >= 16) return 0;
+    inventory.items[inventory.count++] = id;
+    questOnItemGained(id);
+    return 1;
 }
 
 void removeItem(int index) {

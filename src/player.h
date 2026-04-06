@@ -19,5 +19,6 @@ extern PlayerData player;
 extern int playerHp;
 
 int  loadPlayer(PakData data);
-int  xpToNext(void);    /* XP needed to reach the next level */
-int  awardXp(int amount); /* returns number of levels gained */
+int  xpToNext(void);      /* XP needed to reach the next level */
+int  awardXp(int amount);  /* returns number of levels gained */
+void enterDeath(void);     /* lose XP progress, restore HP, go to STATE_DEATH */

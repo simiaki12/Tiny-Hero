@@ -64,6 +64,7 @@ typedef struct { ActionId type; uint8_t power; } Action;
 
 typedef struct {
     Enemy       enemy;
+    uint8_t     enemyDefId;      /* index into enemyDefs[], 0xFF if unknown */
     Action      actions[4];    /* at most 4 shown per turn */
     int         actionCount;
     int         selectedIndex;

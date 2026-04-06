@@ -35,5 +35,6 @@ const char *itemDesc(uint8_t id);
 int         getAttack(void);
 int         getDefense(void);
 void        getPreviewStats(uint8_t id, int *atkOut, int *defOut, int *hpOut);
+int         addItem(uint8_t id);
 void        useOrEquipItem(int index);
 void        removeItem(int index);

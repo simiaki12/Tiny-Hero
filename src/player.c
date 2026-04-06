@@ -1,4 +1,5 @@
 #include "player.h"
+#include "game.h"
 #include <string.h>
 
 PlayerData player;
@@ -33,4 +34,10 @@ int awardXp(int amount) {
     }
     player.xp = (uint8_t)(xp > 255 ? 255 : xp);
     return gained;
+}
+
+void enterDeath(void) {
+    player.xp = 0;        /* lose XP progress within current level — level is kept */
+    playerHp  = player.maxHp; /* healed by the town healer */
+    state     = STATE_DEATH;
 }

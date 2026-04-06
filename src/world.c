@@ -8,6 +8,7 @@
 #include "combat.h"
 #include "town.h"
 #include "player.h"
+#include "quests.h"
 
 int     worldPlayerX = 2;
 int     worldPlayerY = 2;
@@ -106,6 +107,7 @@ void handleWorldInput(int key) {
         worldUpdateCamera();
 
         uint8_t loc = mapLoc[newY * mapWidth + newX];
+        if (loc) questOnZoneEntered(loc);
         if (IS_ENEMY_POOL(loc)) { startCombatFromPool(loc); return; }
         if (loc == LOC_TOWN)    { startTown(); return; }
         if (loc == LOC_DUNGEON) {

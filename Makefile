@@ -9,10 +9,11 @@ LDFLAGS_STATIC = $(LDFLAGS) -static-libgcc
 
 SRC    = $(wildcard src/*.c)
 OUT    = build/game.exe
-PACKER     = build/packer
-MAP_EDITOR = build/map_editor
-PLR_EDITOR = build/player_editor
-DLG_EDITOR = build/dialog_editor
+PACKER      = build/packer
+MAP_EDITOR  = build/map_editor
+PLR_EDITOR  = build/player_editor
+DLG_EDITOR  = build/dialog_editor
+QST_EDITOR  = build/quest_editor
 
 debug: pack
 	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(SRC) -o $(OUT) $(LDFLAGS)
@@ -40,6 +41,15 @@ dialog_editor:
 	mkdir -p build
 	$(CC_HOST) -std=c11 -Os -Wno-unused-result tools/dialog_editor.c -o $(DLG_EDITOR) -lncurses
 
+quest_editor:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os -Wno-unused-result tools/quest_editor.c -o $(QST_EDITOR) -lncurses
+
+seed_quests:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/seed_quests.c -o build/seed_quests
+	./build/seed_quests
+
 seed_dialogs:
 	mkdir -p build
 	$(CC_HOST) -std=c11 -Os tools/seed_dialogs.c -o build/seed_dialogs
@@ -55,7 +65,7 @@ migrate_maps:
 	$(CC_HOST) -std=c11 -Os tools/migrate_map.c -o build/migrate_map
 	./build/migrate_map assets/map1.bin
 
-tools: map_editor player_editor dialog_editor
+tools: map_editor player_editor dialog_editor quest_editor
 
 clean:
 	rm -rf build data.pak

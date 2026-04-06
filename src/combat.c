@@ -9,6 +9,8 @@
 #include "items.h"
 #include "skills.h"
 #include "gfx.h"
+#include "quests.h"
+#include "player.h"
 
 CombatState combat;
 
@@ -128,6 +130,8 @@ static void generateActions(void) {
 }
 
 void startCombat(const EnemyDef *def) {
+    int idx = (int)(def - enemyDefs);
+    combat.enemyDefId = (idx >= 0 && idx < enemyDefCount) ? (uint8_t)idx : 0xFF;
     memcpy(combat.enemy.name, def->name, 16);
     combat.enemy.hp           = def->hp;
     combat.enemy.maxHp        = def->hp;
@@ -216,10 +220,11 @@ static void performPlayerAction(void) {
         combat.gainedXp  = combat.enemy.xpReward;
         combat.leveledUp = awardXp(combat.enemy.xpReward);
         combat.phase     = COMBAT_PHASE_VICTORY;
+        questOnEnemyKilled(combat.enemyDefId);
         return;
     }
     if (playerHp <= 0) {
-        state = STATE_WORLD;
+        enterDeath();
         return;
     }
 

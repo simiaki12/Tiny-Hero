@@ -23,6 +23,7 @@ int main() {
         { "assets/items.dat",   false },
         { "assets/enemies.dat", false },
         { "assets/dialog.dat",  false },
+        { "assets/quests.dat",  false },
     };
 
     /* Resolve which files are present */

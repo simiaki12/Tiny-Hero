@@ -7,6 +7,7 @@
 #include "player.h"
 #include "skills.h"
 #include "gfx.h"
+#include "quests.h"
 
 DialogState dialogSt;
 TownState   townSt;
@@ -156,8 +157,10 @@ void handleDialogInput(int key) {
         case VK_RETURN: {
             const DialogOption *opt = &node->options[dialogSt.selected];
             if (!optionUnlocked(opt)) break;
-            if (opt->nextNode < 0)
+            if (opt->nextNode < 0) {
+                questOnDialogDone(dialogSt.treeId);
                 state = dialogSt.returnState;
+            }
             else {
                 dialogSt.nodeIdx  = opt->nextNode;
                 dialogSt.selected = 0;

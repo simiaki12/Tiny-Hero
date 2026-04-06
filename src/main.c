@@ -14,6 +14,7 @@
 #include "town.h"
 #include "world.h"
 #include "skills.h"
+#include "quests.h"
 
 /* State machine */
 GameState state = STATE_WORLD;
@@ -129,6 +130,32 @@ static void renderMenu(void) {
     }
 }
 
+static void handleDeathInput(int key) {
+    if (key == VK_RETURN || key == VK_ESCAPE) startTown();
+}
+
+static void renderDeath(void) {
+    const int cx = gfxWidth  / 2;
+    const int cy = gfxHeight / 2;
+    const int scale = 2;
+    const int lineH = 8 * scale + 6;
+
+    fillRect(0, 0, gfxWidth, gfxHeight, rgb(15, 5, 5));
+    fillRect(30, cy - 60, gfxWidth - 60, 120, rgb(30, 10, 10));
+    fillRect(30, cy - 60, gfxWidth - 60, 2, rgb(120, 40, 40));
+    fillRect(30, cy + 58, gfxWidth - 60, 2, rgb(120, 40, 40));
+
+    drawText(cx - 120, cy - 48, "YOU HAVE FALLEN", rgb(200, 60, 60), scale);
+    drawText(cx - 272, cy - 48 + lineH,
+        "You have been knocked unconscious.", rgb(180, 160, 140), scale);
+    drawText(cx - 288, cy - 48 + lineH * 2,
+        "You wake up slowly at the healer in", rgb(180, 160, 140), scale);
+    drawText(cx - 128, cy - 48 + lineH * 3,
+        "the nearby town.", rgb(180, 160, 140), scale);
+    drawText(cx - 92, cy - 48 + lineH * 4 + 4,
+        "Press Enter to continue", rgb(100, 80, 60), 1);
+}
+
 static void renderDungeon(void) {
     /* Placeholder — dungeon system coming soon */
     fillRect(40, 40, gfxWidth - 80, gfxHeight - 80, rgb(80, 0, 80));
@@ -173,15 +200,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
     PakData itemData    = pakRead("assets/items.dat");
     PakData enemyData   = pakRead("assets/enemies.dat");
     PakData dialogData  = pakRead("assets/dialog.dat");
+    PakData questData   = pakRead("assets/quests.dat");
 
     if (!loadPlayer(playerData)) { pakClose(); return 1; }
     loadItems(itemData);     /* optional — falls back to builtins if not in pak */
     loadEnemies(enemyData);  /* optional — falls back to builtins if not in pak */
     loadDialogs(dialogData); /* optional — falls back to builtins if not in pak */
+    loadQuests(questData);   /* optional — no quests if absent */
     free(playerData.data);
     free(itemData.data);
     free(enemyData.data);
     free(dialogData.data);
+    free(questData.data);
 
     const int screenW = 640;
     const int screenH = 480;
@@ -224,6 +254,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
             /* P is a global hotkey — opens skills from world, closes from skills */
             if (g_pendingKey == 'P' && (state == STATE_WORLD || state == STATE_SKILLS)) {
                 state = (state == STATE_SKILLS) ? STATE_WORLD : STATE_SKILLS;
+            /* J toggles the quest log from any non-combat state */
+            } else if (g_pendingKey == 'J' && state != STATE_COMBAT) {
+                if (state == STATE_QUEST_LOG) {
+                    state = questLogSt.returnState;
+                } else {
+                    questLogSt.returnState = state;
+                    questLogSt.sel = 0;
+                    state = STATE_QUEST_LOG;
+                }
             } else {
                 switch (state) {
                     case STATE_WORLD:   handleWorldInput(g_pendingKey);   break;
@@ -231,8 +270,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
                     case STATE_MENU:    handleMenuInput(g_pendingKey);    break;
                     case STATE_SKILLS:  handleSkillsInput(g_pendingKey);  break;
                     case STATE_DIALOG:  handleDialogInput(g_pendingKey);  break;
-                    case STATE_DUNGEON: handleDungeonInput(g_pendingKey); break;
-                    case STATE_TOWN:    handleTownInput(g_pendingKey);    break;
+                    case STATE_DUNGEON:   handleDungeonInput(g_pendingKey);   break;
+                    case STATE_TOWN:     handleTownInput(g_pendingKey);      break;
+                    case STATE_QUEST_LOG: handleQuestLogInput(g_pendingKey); break;
+                    case STATE_DEATH:    handleDeathInput(g_pendingKey);    break;
                 }
             }
             g_pendingKey = 0;
@@ -245,8 +286,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
             case STATE_MENU:    renderMenu();    break;
             case STATE_SKILLS:  renderSkills();  break;
             case STATE_DIALOG:  renderDialog();  break;
-            case STATE_DUNGEON: renderDungeon(); break;
-            case STATE_TOWN:    renderTown();    break;
+            case STATE_DUNGEON:   renderDungeon();   break;
+            case STATE_TOWN:     renderTown();      break;
+            case STATE_QUEST_LOG: renderQuestLog(); break;
+            case STATE_DEATH:    renderDeath();    break;
         }
 
         gfxPresent(g_hwnd);
