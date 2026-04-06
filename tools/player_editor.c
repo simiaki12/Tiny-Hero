@@ -11,6 +11,9 @@ typedef struct {
     uint8_t weaponId;
     uint8_t armorId;
     uint8_t skills[16];
+    uint8_t level;
+    uint8_t xp;
+    uint8_t skillPoints;
 } PlayerData;
 
 static PlayerData p;
@@ -22,6 +25,7 @@ static void load(void) {
         memset(&p, 0, sizeof(p));
         p.maxHp = 20; p.attack = 5; p.defense = 3;
         p.weaponId = 0xFF; p.armorId = 0xFF; /* unequipped */
+        p.level = 1; p.xp = 0;
         return;
     }
     (void)fread(&p, 1, sizeof(p), f);
@@ -48,20 +52,23 @@ int main(void) {
         /* skills — keep in sync with SKILL_* in skills.h */
         "Blades", "Sneak", "Magic", "Diplomacy", "Survival", "Archery",
         "Skill 6",  "Skill 7",  "Skill 8",  "Skill 9",
-        "Skill 10", "Skill 11", "Skill 12", "Skill 13", "Skill 14", "Skill 15"
+        "Skill 10", "Skill 11", "Skill 12", "Skill 13", "Skill 14", "Skill 15",
+        "Level", "XP", "Skill Points"
     };
     uint8_t *fields[] = {
         &p.maxHp, &p.attack, &p.defense, &p.weaponId, &p.armorId,
         &p.skills[0],  &p.skills[1],  &p.skills[2],  &p.skills[3],
         &p.skills[4],  &p.skills[5],  &p.skills[6],  &p.skills[7],
         &p.skills[8],  &p.skills[9],  &p.skills[10], &p.skills[11],
-        &p.skills[12], &p.skills[13], &p.skills[14], &p.skills[15]
+        &p.skills[12], &p.skills[13], &p.skills[14], &p.skills[15],
+        &p.level, &p.xp, &p.skillPoints
     };
     uint8_t maxVals[] = {
         255, 255, 255, 255, 255,
-        10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10
+        10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+        99, 255, 255
     };
-    int nFields = 21;
+    int nFields = 24;
     int sel     = 0;
     int dirty   = 0;
     int running = 1;

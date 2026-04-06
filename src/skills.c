@@ -71,11 +71,17 @@ void handleSkillsInput(int key) {
         case VK_DOWN:
             selectedSkill = (selectedSkill + 1) % SKILL_COUNT;
             break;
-        case VK_RETURN: case '=':
-            if (player.skills[selectedSkill] < 10) player.skills[selectedSkill]++;
+        case VK_RETURN:
+            if (player.skillPoints > 0 && player.skills[selectedSkill] < 10) {
+                player.skills[selectedSkill]++;
+                player.skillPoints--;
+            }
             break;
-        case VK_BACK: case '-':
-            if (player.skills[selectedSkill] > 0)  player.skills[selectedSkill]--;
+        case VK_BACK:
+            if (player.skills[selectedSkill] > 0) {
+                player.skills[selectedSkill]--;
+                player.skillPoints++;
+            }
             break;
         case VK_ESCAPE:
         case 'P':
@@ -91,9 +97,13 @@ void renderSkills(void) {
     const int descBoxY = gfxHeight - 120;
 
     fillRect(40, 40, gfxWidth - 80, gfxHeight - 80, rgb(10, 30, 10));
-    drawText(listX, 50, "SKILLS", rgb(180, 220, 180), 2);
 
     char buf[32];
+    drawText(listX, 50, "SKILLS", rgb(180, 220, 180), 2);
+    snprintf(buf, sizeof(buf), "Points: %d", player.skillPoints);
+    uint32_t ptColor = player.skillPoints > 0 ? rgb(255, 220, 80) : rgb(80, 100, 80);
+    drawText(listX + 100, 50, buf, ptColor, 2);
+
     for (int i = 0; i < SKILL_COUNT; i++) {
         int sel = (i == selectedSkill);
         uint8_t val = player.skills[i];
@@ -114,5 +124,5 @@ void renderSkills(void) {
                   skillDesc(selectedSkill),
                   rgb(140, 190, 140), 1);
 
-    drawText(listX, gfxHeight - 50, "P / ESC  close      + / -  adjust", rgb(50, 70, 50), 1);
+    drawText(listX, gfxHeight - 50, "P / ESC  close      Enter=spend  Bksp=refund", rgb(50, 70, 50), 1);
 }

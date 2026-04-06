@@ -6,6 +6,7 @@
 #include "gfx.h"
 #include "combat.h"
 #include "town.h"
+#include "player.h"
 
 int     worldPlayerX = 2;
 int     worldPlayerY = 2;
@@ -104,7 +105,7 @@ void handleWorldInput(int key) {
         worldUpdateCamera();
 
         LocType loc = (LocType)mapLoc[newY * mapWidth + newX];
-        if (loc == LOC_ENEMY) { startCombat(); return; }
+        if (loc == LOC_ENEMY) { startCombat(player.level); return; }
         if (loc == LOC_TOWN)  { startTown();   return; }
         if (loc == LOC_DUNGEON) {
             if (mapTransitionTarget[0] != '\0')

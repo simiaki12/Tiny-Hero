@@ -119,6 +119,12 @@ static void renderMenu(void) {
         else
             snprintf(buf, sizeof(buf), "HP:  %d / %d", playerHp, player.maxHp);
         drawText(x, y, buf, rgb(100, 220, 100), 2);
+        y += lineH + 4;
+
+        snprintf(buf, sizeof(buf), "LVL: %d", player.level);
+        drawText(x, y, buf, rgb(220, 200, 100), 2); y += lineH;
+        snprintf(buf, sizeof(buf), "XP:  %d / %d", player.xp, xpToNext());
+        drawText(x, y, buf, rgb(180, 160, 80), 2);
     }
 }
 

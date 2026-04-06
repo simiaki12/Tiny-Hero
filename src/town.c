@@ -222,15 +222,15 @@ void renderDialog(void) {
     const int textX  = boxX + 12;
     const int scale  = 2;
     const int lineH  = 8 * scale;
-    const int optH   = 10;
+    const int optH   = 18;
     const int wrapAt = (boxW - 24) / (8 * scale);
 
     fillRect(boxX, boxY, boxW, boxH, rgb(0, 0, 30));
     fillRect(boxX, boxY, boxW, 2, rgb(100, 140, 200));
 
-    drawText(textX, boxY + 6, tree->speakerName, rgb(160, 200, 255), 1);
+    drawText(textX, boxY + 6, tree->speakerName, rgb(160, 200, 255), 2);
 
-    int speechY = boxY + 20;
+    int speechY = boxY + 28;
     int lines   = drawWrapped(textX, speechY, node->line, rgb(220, 220, 220), scale, wrapAt);
     int divY    = speechY + lines * lineH + 6;
 
@@ -246,12 +246,12 @@ void renderDialog(void) {
         if (unlocked) {
             snprintf(buf, sizeof(buf), "%s%s",
                 sel ? "> " : "  ", opt->text);
-            drawText(textX, optY, buf, sel ? rgb(255, 255, 100) : rgb(200, 200, 200), 1);
+            drawText(textX, optY, buf, sel ? rgb(255, 255, 100) : rgb(200, 200, 200), 2);
         } else {
-            snprintf(buf, sizeof(buf), "%s[%s %d required]",
+            snprintf(buf, sizeof(buf), "%s[Locked. %s %d required]",
                 sel ? "> " : "  ",
                 skillName(opt->requiredSkill), opt->requiredLevel);
-            drawText(textX, optY, buf, sel ? rgb(120, 120, 160) : rgb(70, 70, 90), 1);
+            drawText(textX, optY, buf, sel ? rgb(120, 120, 160) : rgb(70, 70, 90), 2);
         }
         optY += optH;
     }

@@ -126,18 +126,25 @@ static void generateActions(void) {
     combat.selectedIndex = 0;
 }
 
-void startCombat(void) {
-    combat.enemy.hp           = 20;
-    combat.enemy.maxHp        = 20;
-    combat.enemy.attack       = 4;
-    combat.enemy.defense      = 1;
+void startCombat(int enemyLevel) {
+    if (enemyLevel < 1) enemyLevel = 1;
+    int hp                    = enemyLevel * 8 + 12;
+    combat.enemy.hp           = hp;
+    combat.enemy.maxHp        = hp;
+    combat.enemy.attack       = (uint8_t)(enemyLevel + 3);
+    combat.enemy.defense      = (uint8_t)(enemyLevel / 2);
     combat.enemy.size         = 2;
     combat.enemy.speed        = 2;
     combat.enemy.intelligence = 1;
     combat.enemy.perception   = 2;
     combat.enemy.flags        = ENEMY_HAS_WEAPON | ENEMY_EXECUTABLE | ENEMY_STUNNABLE | ENEMY_BLOCKABLE;
+    combat.enemy.level        = (uint8_t)enemyLevel;
+    combat.enemy.xpReward     = (uint8_t)(enemyLevel * 8 + 7);
     combat.isFirstTurn        = 1;
     combat.skipEnemyAttack    = 0;
+    combat.phase              = COMBAT_PHASE_ACTIVE;
+    combat.gainedXp           = 0;
+    combat.leveledUp          = 0;
     generateActions();
     state = STATE_COMBAT;
 }
@@ -206,7 +213,13 @@ static void performPlayerAction(void) {
         playerHp -= dmg;
     }
 
-    if (playerHp <= 0 || combat.enemy.hp <= 0) {
+    if (combat.enemy.hp <= 0) {
+        combat.gainedXp  = combat.enemy.xpReward;
+        combat.leveledUp = awardXp(combat.enemy.xpReward);
+        combat.phase     = COMBAT_PHASE_VICTORY;
+        return;
+    }
+    if (playerHp <= 0) {
         state = STATE_WORLD;
         return;
     }
@@ -216,6 +229,10 @@ static void performPlayerAction(void) {
 }
 
 void handleCombatInput(int key) {
+    if (combat.phase == COMBAT_PHASE_VICTORY) {
+        if (key == VK_RETURN || key == VK_ESCAPE) state = STATE_WORLD;
+        return;
+    }
     switch (key) {
         case VK_UP:
             combat.selectedIndex--;
@@ -232,11 +249,26 @@ void handleCombatInput(int key) {
 void renderCombat(void) {
     fillRect(40, 40, gfxWidth - 80, gfxHeight - 80, rgb(20, 10, 10));
 
-    char buf[40];
+    char buf[48];
     int x = 60, y = 60;
     const int lineH = 20;
 
-    snprintf(buf, sizeof(buf), "Enemy HP: %d / %d", combat.enemy.hp, combat.enemy.maxHp);
+    if (combat.phase == COMBAT_PHASE_VICTORY) {
+        drawText(x, y, "VICTORY!", rgb(255, 220, 50), 2); y += lineH + 4;
+        snprintf(buf, sizeof(buf), "+%d XP", combat.gainedXp);
+        drawText(x, y, buf, rgb(180, 255, 180), 2); y += lineH;
+        if (combat.leveledUp) {
+            snprintf(buf, sizeof(buf), "LEVEL UP!  Lv.%d", player.level);
+            drawText(x, y, buf, rgb(255, 255, 100), 2); y += lineH;
+            drawText(x, y, "+5 HP  +1 ATK  +1 DEF", rgb(200, 200, 100), 2); y += lineH;
+        }
+        y += 8;
+        drawText(x, y, "Enter / Esc to continue", rgb(120, 120, 120), 1);
+        return;
+    }
+
+    snprintf(buf, sizeof(buf), "Enemy  Lv.%d  HP: %d / %d",
+             combat.enemy.level, combat.enemy.hp, combat.enemy.maxHp);
     drawText(x, y, buf, rgb(220, 80, 80), 2); y += lineH + 4;
 
     snprintf(buf, sizeof(buf), "Your HP:  %d / %d", playerHp, player.maxHp);

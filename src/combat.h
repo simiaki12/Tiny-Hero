@@ -17,7 +17,11 @@ typedef struct {
     uint8_t intelligence; /* raises Calm weight */
     uint8_t perception;   /* lowers Hide/Backstab weight */
     uint8_t flags;        /* ENEMY_* bitfield — add new flags here freely */
+    uint8_t level;
+    uint8_t xpReward;
 } Enemy;
+
+typedef enum { COMBAT_PHASE_ACTIVE, COMBAT_PHASE_VICTORY } CombatPhase;
 
 /* --- Action system --- */
 
@@ -58,16 +62,19 @@ typedef struct {
 typedef struct { ActionId type; uint8_t power; } Action;
 
 typedef struct {
-    Enemy   enemy;
-    Action  actions[4];    /* at most 4 shown per turn */
-    int     actionCount;
-    int     selectedIndex;
-    int     isFirstTurn;
-    int     skipEnemyAttack;  /* set by actions like Backstab, Stun, Hide */
+    Enemy       enemy;
+    Action      actions[4];    /* at most 4 shown per turn */
+    int         actionCount;
+    int         selectedIndex;
+    int         isFirstTurn;
+    int         skipEnemyAttack;  /* set by actions like Backstab, Stun, Hide */
+    CombatPhase phase;
+    int         gainedXp;
+    int         leveledUp;
 } CombatState;
 
 extern CombatState combat;
 
-void startCombat(void);
+void startCombat(int enemyLevel);
 void handleCombatInput(int key);
 void renderCombat(void);
