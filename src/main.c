@@ -158,15 +158,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmdShow) {
     (void)hPrev; (void)cmdLine;
 
+    srand((unsigned int)GetTickCount());
+
     if (!pakOpen("data.pak")) return 1;
 
     PakData playerData = pakRead("assets/player.dat");
     PakData itemData   = pakRead("assets/items.dat");
+    PakData dialogData = pakRead("assets/dialog.dat");
 
     if (!loadPlayer(playerData)) { pakClose(); return 1; }
-    loadItems(itemData);  /* optional — falls back to builtins if not in pak */
+    loadItems(itemData);    /* optional — falls back to builtins if not in pak */
+    loadDialogs(dialogData);/* optional — falls back to builtins if not in pak */
     free(playerData.data);
     free(itemData.data);
+    free(dialogData.data);
 
     const int screenW = 640;
     const int screenH = 480;
@@ -182,7 +187,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
     g_hwnd = CreateWindowA(
-        "TinyHero", "smolhero",
+        "TinyHero", "Tiny Hero",
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT,
         wr.right - wr.left, wr.bottom - wr.top,

@@ -12,6 +12,7 @@ OUT    = build/game.exe
 PACKER     = build/packer
 MAP_EDITOR = build/map_editor
 PLR_EDITOR = build/player_editor
+DLG_EDITOR = build/dialog_editor
 
 debug: pack
 	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(SRC) -o $(OUT) $(LDFLAGS)
@@ -35,7 +36,16 @@ player_editor:
 	mkdir -p build
 	$(CC_HOST) -std=c11 -Os -Wno-unused-result tools/player_editor.c -o $(PLR_EDITOR) -lncurses
 
-tools: map_editor player_editor
+dialog_editor:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os -Wno-unused-result tools/dialog_editor.c -o $(DLG_EDITOR) -lncurses
+
+seed_dialogs:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/seed_dialogs.c -o build/seed_dialogs
+	./build/seed_dialogs
+
+tools: map_editor player_editor dialog_editor
 
 clean:
 	rm -rf build data.pak

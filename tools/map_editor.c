@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define MAX_W 64
 #define MAX_H 64
@@ -10,18 +11,39 @@ static uint8_t mapGfx[MAX_W * MAX_H];
 static uint8_t mapLoc[MAX_W * MAX_H];
 static int mapW = 10, mapH = 8;
 static int curX = 0, curY = 0;
+static int spawnX = 2, spawnY = 2;
+
+/* transition target preserved verbatim on load/save; not editable in this tool */
+static char transitionTarget[64] = {0};
+
 static const char *outfile = "assets/map1.bin";
 
 static void loadMap(void) {
     FILE *f = fopen(outfile, "rb");
-    if (!f) return;
+    if (!f) {
+        /* file not found — keep defaults and warn after ncurses init */
+        return;
+    }
+
     uint8_t w, h;
-    (void)fread(&w, 1, 1, f);
-    (void)fread(&h, 1, 1, f);
+    if (fread(&w, 1, 1, f) < 1 || fread(&h, 1, 1, f) < 1) { fclose(f); return; }
     mapW = w; mapH = h;
     int n = mapW * mapH;
     (void)fread(mapGfx, 1, n, f);
     (void)fread(mapLoc, 1, n, f);
+
+    /* Optional extension: spawnX, spawnY, null-terminated transition target */
+    uint8_t sx, sy;
+    if (fread(&sx, 1, 1, f) == 1 && fread(&sy, 1, 1, f) == 1) {
+        spawnX = sx;
+        spawnY = sy;
+        int i = 0;
+        int c;
+        while (i < 63 && (c = fgetc(f)) != EOF && c != '\0')
+            transitionTarget[i++] = (char)c;
+        transitionTarget[i] = '\0';
+    }
+
     fclose(f);
 }
 
@@ -34,6 +56,13 @@ static void saveMap(void) {
     int n = mapW * mapH;
     fwrite(mapGfx, 1, n, f);
     fwrite(mapLoc, 1, n, f);
+
+    /* Extension: spawn + transition target */
+    uint8_t sx = (uint8_t)spawnX, sy = (uint8_t)spawnY;
+    fwrite(&sx, 1, 1, f);
+    fwrite(&sy, 1, 1, f);
+    fwrite(transitionTarget, 1, strlen(transitionTarget) + 1, f);
+
     fclose(f);
 }
 
@@ -43,7 +72,9 @@ static void drawMap(void) {
             int idx = y * mapW + x;
             char ch;
             int attr;
-            if (mapGfx[idx] == 1) {
+            if (x == spawnX && y == spawnY && mapGfx[idx] == 0) {
+                ch = '@'; attr = COLOR_PAIR(6);
+            } else if (mapGfx[idx] == 1) {
                 ch = '#'; attr = COLOR_PAIR(1);
             } else {
                 switch (mapLoc[idx]) {
@@ -55,13 +86,22 @@ static void drawMap(void) {
             }
             if (x == curX && y == curY) attr |= A_REVERSE;
             attron(attr);
-            mvaddch(y + 2, x * 2, ch);
+            mvaddch(y + 3, x * 2, ch);
             attroff(attr);
         }
     }
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+    if (argc >= 2) outfile = argv[1];
+
+    int fileFound = 1;
+    {
+        FILE *probe = fopen(outfile, "rb");
+        if (!probe) fileFound = 0;
+        else fclose(probe);
+    }
+
     loadMap();
 
     initscr();
@@ -75,16 +115,29 @@ int main(void) {
     init_pair(3, COLOR_YELLOW,  COLOR_BLACK);  /* town    */
     init_pair(4, COLOR_MAGENTA, COLOR_BLACK);  /* dungeon */
     init_pair(5, COLOR_GREEN,   COLOR_BLACK);  /* floor   */
+    init_pair(6, COLOR_CYAN,    COLOR_BLACK);  /* spawn   */
 
     int running = 1;
     int dirty   = 0;
 
     while (running) {
         clear();
-        mvprintw(0, 0, "MAP EDITOR  %dx%d  [%s]", mapW, mapH, dirty ? "unsaved" : "saved");
-        mvprintw(1, 0, "Arrows=move  W=#wall  F=.floor  E=enemy  T=town  D=dungeon  C=clear-loc  S=save  Q=quit");
+        mvprintw(0, 0, "MAP EDITOR  %dx%d  spawn(%d,%d)  [%s]  %s",
+                 mapW, mapH, spawnX, spawnY,
+                 dirty ? "unsaved" : "saved",
+                 fileFound ? outfile : "NEW FILE");
+        if (!fileFound) {
+            attron(COLOR_PAIR(2));
+            mvprintw(1, 0, "WARNING: '%s' not found — starting blank map", outfile);
+            attroff(COLOR_PAIR(2));
+            mvprintw(2, 0, "Arrows=move  W=#  F=.floor  E=enemy  T=town  D=dungeon  C=clear  P=spawn  S=save  Q=quit");
+        } else {
+            mvprintw(1, 0, "Arrows=move  W=#  F=.floor  E=enemy  T=town  D=dungeon  C=clear  P=spawn  S=save  Q=quit");
+            mvprintw(2, 0, "Legend: #=wall  .=floor  E=enemy  T=town  D=dungeon  @=spawn");
+        }
+
         drawMap();
-        mvprintw(mapH + 3, 0, "cursor (%d,%d)  gfx=%d loc=%d",
+        mvprintw(mapH + 4, 0, "cursor (%d,%d)  gfx=%d loc=%d",
                  curX, curY, mapGfx[curY * mapW + curX], mapLoc[curY * mapW + curX]);
         refresh();
 
@@ -124,9 +177,17 @@ int main(void) {
                 mapLoc[idx] = 0;
                 dirty = 1;
                 break;
+            case 'p': case 'P':
+                if (mapGfx[idx] == 0) {
+                    spawnX = curX;
+                    spawnY = curY;
+                    dirty = 1;
+                }
+                break;
             case 's': case 'S':
                 saveMap();
                 dirty = 0;
+                fileFound = 1;
                 break;
             case 'q': case 'Q':
                 running = 0;
@@ -139,8 +200,8 @@ int main(void) {
     if (dirty) {
         printf("Unsaved changes. Save? (y/n): ");
         fflush(stdout);
-        int ch = getchar();
-        if (ch == 'y' || ch == 'Y') saveMap();
+        int c = getchar();
+        if (c == 'y' || c == 'Y') saveMap();
     }
 
     return 0;

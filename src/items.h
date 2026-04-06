@@ -7,7 +7,6 @@ typedef enum { ITEM_WEAPON, ITEM_ARMOR, ITEM_CONSUMABLE } ItemType;
 #define ITEM_FLAG_HEAL        0x01
 #define ITEM_FLAG_BUFF_ATTACK 0x02
 
-#define ITEM_NO_ABILITY 0xFF
 #define ITEM_UNEQUIPPED 0xFF
 
 /* 8 bytes — pak-friendly, no pointers */
@@ -15,9 +14,8 @@ typedef struct {
     uint8_t type;
     int8_t  attackBonus;
     int8_t  defenseBonus;
-    uint8_t abilityGranted;
     uint8_t flags;
-    uint8_t _pad[3];
+    uint8_t _pad[4];
 } ItemDef;
 
 typedef struct {

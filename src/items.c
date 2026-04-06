@@ -13,9 +13,9 @@ Inventory inventory = {
 
 /* Hardcoded until items.dat is added to the pak */
 static const ItemDef builtinDefs[] = {
-    { ITEM_WEAPON,     3, 0, ITEM_NO_ABILITY, 0,              {0,0,0} }, /* 0: Sword  */
-    { ITEM_ARMOR,      0, 2, ITEM_NO_ABILITY, 0,              {0,0,0} }, /* 1: Armor  */
-    { ITEM_CONSUMABLE, 0, 0, ITEM_NO_ABILITY, ITEM_FLAG_HEAL, {0,0,0} }, /* 2: Potion */
+    { ITEM_WEAPON,     3, 0, 0,              {0,0,0,0} }, /* 0: Sword  */
+    { ITEM_ARMOR,      0, 2, 0,              {0,0,0,0} }, /* 1: Armor  */
+    { ITEM_CONSUMABLE, 0, 0, ITEM_FLAG_HEAL, {0,0,0,0} }, /* 2: Potion */
 };
 #define BUILTIN_COUNT (int)(sizeof(builtinDefs)/sizeof(builtinDefs[0]))
 
@@ -113,11 +113,4 @@ void useOrEquipItem(int index) {
         removeItem(index);
     }
 
-    if (d->abilityGranted != ITEM_NO_ABILITY) {
-        int i;
-        for (i = 0; i < player.abilityCount; i++)
-            if (player.abilities[i] == d->abilityGranted) return;
-        if (player.abilityCount < 8)
-            player.abilities[player.abilityCount++] = d->abilityGranted;
-    }
 }

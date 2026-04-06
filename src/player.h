@@ -9,8 +9,6 @@ typedef struct {
     uint8_t defense;
     uint8_t weaponId;
     uint8_t armorId;
-    uint8_t abilityCount;
-    uint8_t abilities[8];   /* legacy — replaced by skills in step 2 */
     uint8_t skills[SKILL_MAX];
 } PlayerData;
 

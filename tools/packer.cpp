@@ -11,11 +11,32 @@ struct PakEntry {
     uint32_t size;
 };
 
+struct FileSpec {
+    std::string path;
+    bool required;
+};
+
 int main() {
-    std::vector<std::string> files = {
-        "assets/map1.bin",
-        "assets/player.dat"
+    std::vector<FileSpec> specs = {
+        { "assets/map1.bin",    true  },
+        { "assets/player.dat",  true  },
+        { "assets/items.dat",   false },
+        { "assets/dialog.dat",  false },
     };
+
+    /* Resolve which files are present */
+    std::vector<std::string> files;
+    for (auto &s : specs) {
+        std::ifstream test(s.path, std::ios::binary);
+        if (test) {
+            files.push_back(s.path);
+        } else if (s.required) {
+            std::cerr << "Required file missing: " << s.path << "\n";
+            return 1;
+        } else {
+            std::cerr << "Optional file not found, skipping: " << s.path << "\n";
+        }
+    }
 
     std::ofstream out("data.pak", std::ios::binary);
     if (!out) {
@@ -28,12 +49,11 @@ int main() {
     out.write((char*)&count, 2);
 
     std::vector<PakEntry> entries(count);
-    // Reserve space for the file table (filled in later)
     out.write((char*)entries.data(), count * sizeof(PakEntry));
 
     uint32_t offset = 4 + 2 + count * sizeof(PakEntry);
 
-    for (int i = 0; i < count; i++) {
+    for (int i = 0; i < (int)count; i++) {
         std::ifstream in(files[i], std::ios::binary);
         if (!in) {
             std::cerr << "Failed to open: " << files[i] << "\n";
@@ -47,7 +67,7 @@ int main() {
         strncpy(entries[i].name, files[i].c_str(), 31);
         entries[i].name[31] = '\0';
         entries[i].offset = offset;
-        entries[i].size = size;
+        entries[i].size   = size;
 
         std::vector<char> buffer(size);
         in.read(buffer.data(), size);
@@ -58,7 +78,6 @@ int main() {
         offset += size;
     }
 
-    // Write the completed file table
     out.seekp(6);
     out.write((char*)entries.data(), count * sizeof(PakEntry));
 
