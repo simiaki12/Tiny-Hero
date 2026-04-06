@@ -1,5 +1,6 @@
 #include "items.h"
 #include "player.h"
+#include <stdio.h>
 #include <string.h>
 
 ItemDef   itemDefs[64];
@@ -11,19 +12,21 @@ Inventory inventory = {
     0
 };
 
-/* Hardcoded until items.dat is added to the pak */
 static const ItemDef builtinDefs[] = {
-    { ITEM_WEAPON,     3, 0, 0,              {0,0,0,0} }, /* 0: Sword  */
-    { ITEM_ARMOR,      0, 2, 0,              {0,0,0,0} }, /* 1: Armor  */
-    { ITEM_CONSUMABLE, 0, 0, ITEM_FLAG_HEAL, {0,0,0,0} }, /* 2: Potion */
+    { "Iron Sword",     ITEM_WEAPON,      3,  0, 0              },
+    { "Leather Armor",  ITEM_ARMOR,       0,  2, 0              },
+    { "Health Potion",  ITEM_CONSUMABLE,  0,  0, ITEM_FLAG_HEAL },
 };
 #define BUILTIN_COUNT (int)(sizeof(builtinDefs)/sizeof(builtinDefs[0]))
 
+/* Format: [1 count][N × sizeof(ItemDef)] */
 int loadItems(PakData data) {
-    if (!data.data) return 0;
-    int n = (int)(data.size / sizeof(ItemDef));
+    if (!data.data || data.size < 1) return 0;
+    uint8_t n = ((const uint8_t *)data.data)[0];
     if (n > 64) n = 64;
-    memcpy(itemDefs, data.data, (size_t)n * sizeof(ItemDef));
+    uint32_t expected = 1 + (uint32_t)n * sizeof(ItemDef);
+    if (data.size < expected) return 0;
+    memcpy(itemDefs, (const uint8_t *)data.data + 1, (size_t)n * sizeof(ItemDef));
     itemDefCount = n;
     return n;
 }
@@ -35,20 +38,27 @@ const ItemDef *itemGetDef(uint8_t id) {
 }
 
 const char *itemName(uint8_t id) {
-    switch (id) {
-        case 0: return "Sword";
-        case 1: return "Armor";
-        case 2: return "Potion";
-        default: return "???";
-    }
+    const ItemDef *d = itemGetDef(id);
+    return d ? d->name : "???";
 }
 
 const char *itemDesc(uint8_t id) {
-    switch (id) {
-        case 0: return "+3 ATK";
-        case 1: return "+2 DEF";
-        case 2: return "Restores 10 HP";
-        default: return "";
+    static char buf[32];
+    const ItemDef *d = itemGetDef(id);
+    if (!d) return "";
+    switch (d->type) {
+        case ITEM_WEAPON:
+            snprintf(buf, sizeof(buf), "%+d ATK", d->attackBonus);
+            return buf;
+        case ITEM_ARMOR:
+            snprintf(buf, sizeof(buf), "%+d DEF", d->defenseBonus);
+            return buf;
+        case ITEM_CONSUMABLE:
+            if (d->flags & ITEM_FLAG_HEAL)        return "Restores HP";
+            if (d->flags & ITEM_FLAG_BUFF_ATTACK)  return "Boosts ATK";
+            return "Consumable";
+        default:
+            return "";
     }
 }
 
@@ -76,7 +86,6 @@ void getPreviewStats(uint8_t id, int *atkOut, int *defOut, int *hpOut) {
     *defOut = getDefense();
     *hpOut  = playerHp;
     if (!d) return;
-
     if (d->type == ITEM_WEAPON)
         *atkOut = player.attack + d->attackBonus;
     else if (d->type == ITEM_ARMOR)
@@ -100,7 +109,6 @@ void useOrEquipItem(int index) {
     uint8_t id = inventory.items[index];
     const ItemDef *d = itemGetDef(id);
     if (!d) return;
-
     if (d->type == ITEM_WEAPON) {
         player.weaponId = id;
     } else if (d->type == ITEM_ARMOR) {
@@ -112,5 +120,4 @@ void useOrEquipItem(int index) {
         }
         removeItem(index);
     }
-
 }

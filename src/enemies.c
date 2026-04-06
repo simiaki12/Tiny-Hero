@@ -1,0 +1,76 @@
+#include <string.h>
+#include <stdlib.h>
+#include <windows.h>
+#include "enemies.h"
+#include "combat.h"
+
+EnemyDef  enemyDefs[ENEMY_DEF_MAX];
+int       enemyDefCount = 0;
+EnemyPool enemyPools[ENEMY_POOL_MAX];
+int       enemyPoolCount = 0;
+
+/* Fallback used when enemies.dat is absent from the pak */
+static void initBuiltinEnemies(void) {
+    /* --- defs --- */
+    static const EnemyDef builtins[] = {
+        /*  name          hp  atk def siz spd int per flags                                              xp  pad */
+        { "Goblin",       12,  4,  1,  1,  3,  1,  2, EDEF_EXECUTABLE | EDEF_STUNNABLE,                 8, {0} },
+        { "Wolf",         10,  5,  0,  2,  4,  1,  3, EDEF_STUNNABLE,                                   7, {0} },
+        { "Skeleton",     20,  6,  2,  2,  2,  1,  1, EDEF_HAS_WEAPON|EDEF_BLOCKABLE|EDEF_EXECUTABLE,  14, {0} },
+        { "Bandit",       18,  7,  2,  2,  3,  3,  3, EDEF_HAS_WEAPON|EDEF_EXECUTABLE|EDEF_STUNNABLE,  16, {0} },
+    };
+    int n = (int)(sizeof(builtins) / sizeof(builtins[0]));
+    memcpy(enemyDefs, builtins, (size_t)n * sizeof(EnemyDef));
+    enemyDefCount = n;
+
+    /* --- pools --- */
+    /* Pool 1 (loc 0x01): outdoor / forest */
+    enemyPools[0].enemyIds[0] = 0; /* Goblin */
+    enemyPools[0].enemyIds[1] = 1; /* Wolf   */
+    enemyPools[0].count = 2;
+
+    /* Pool 2 (loc 0x02): dungeon / ruins */
+    enemyPools[1].enemyIds[0] = 2; /* Skeleton */
+    enemyPools[1].enemyIds[1] = 3; /* Bandit   */
+    enemyPools[1].count = 2;
+
+    enemyPoolCount = 2;
+}
+
+int loadEnemies(PakData data) {
+    if (!data.data || data.size < 2) { initBuiltinEnemies(); return 0; }
+
+    const uint8_t *d   = (const uint8_t *)data.data;
+    uint32_t       pos = 0;
+
+    uint8_t dc = d[pos++];
+    if (dc > ENEMY_DEF_MAX) dc = ENEMY_DEF_MAX;
+    if (pos + (uint32_t)dc * sizeof(EnemyDef) > data.size) { initBuiltinEnemies(); return 0; }
+    memcpy(enemyDefs, d + pos, (size_t)dc * sizeof(EnemyDef));
+    enemyDefCount = dc;
+    pos += (uint32_t)dc * sizeof(EnemyDef);
+
+    if (pos >= data.size) { enemyPoolCount = 0; return dc; }
+    uint8_t pc = d[pos++];
+    if (pc > ENEMY_POOL_MAX) pc = ENEMY_POOL_MAX;
+    if (pos + (uint32_t)pc * sizeof(EnemyPool) > data.size) { enemyPoolCount = 0; return dc; }
+    memcpy(enemyPools, d + pos, (size_t)pc * sizeof(EnemyPool));
+    enemyPoolCount = pc;
+
+    return dc;
+}
+
+void startCombatFromPool(uint8_t poolId) {
+    /* poolId is a loc tile value (0x01-0x0F); maps to pool index poolId-1 */
+    int idx = (int)poolId - 1;
+    if (idx < 0 || idx >= enemyPoolCount || enemyPools[idx].count == 0) {
+        /* Fallback: first defined enemy */
+        if (enemyDefCount > 0) startCombat(&enemyDefs[0]);
+        return;
+    }
+    EnemyPool *pool = &enemyPools[idx];
+    int pick = rand() % pool->count;
+    uint8_t defId = pool->enemyIds[pick];
+    if (defId >= (uint8_t)enemyDefCount) defId = 0;
+    startCombat(&enemyDefs[defId]);
+}

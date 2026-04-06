@@ -4,6 +4,7 @@
 #include "world.h"
 #include "game.h"
 #include "gfx.h"
+#include "enemies.h"
 #include "combat.h"
 #include "town.h"
 #include "player.h"
@@ -104,9 +105,9 @@ void handleWorldInput(int key) {
         worldPlayerY = newY;
         worldUpdateCamera();
 
-        LocType loc = (LocType)mapLoc[newY * mapWidth + newX];
-        if (loc == LOC_ENEMY) { startCombat(player.level); return; }
-        if (loc == LOC_TOWN)  { startTown();   return; }
+        uint8_t loc = mapLoc[newY * mapWidth + newX];
+        if (IS_ENEMY_POOL(loc)) { startCombatFromPool(loc); return; }
+        if (loc == LOC_TOWN)    { startTown(); return; }
         if (loc == LOC_DUNGEON) {
             if (mapTransitionTarget[0] != '\0')
                 worldLoadNamed(mapTransitionTarget);
@@ -130,15 +131,17 @@ void renderWorld(void) {
     for (int y = tileY0; y < tileY1; y++) {
         for (int x = tileX0; x < tileX1; x++) {
             uint32_t color;
+            uint8_t  loc = mapLoc[y * mapWidth + x];
             if (mapGfx[y * mapWidth + x] == 1) {
                 color = rgb(100, 100, 100);
+            } else if (IS_ENEMY_POOL(loc)) {
+                color = rgb(120, 30, 30);
+            } else if (loc == LOC_TOWN) {
+                color = rgb(150, 120, 0);
+            } else if (loc == LOC_DUNGEON) {
+                color = rgb(80, 0, 80);
             } else {
-                switch ((LocType)mapLoc[y * mapWidth + x]) {
-                    case LOC_ENEMY:   color = rgb(120,  30,  30); break;
-                    case LOC_TOWN:    color = rgb(150, 120,   0); break;
-                    case LOC_DUNGEON: color = rgb( 80,   0,  80); break;
-                    default:          color = rgb(  0, 100,   0); break;
-                }
+                color = rgb(0, 100, 0);
             }
             fillRect(x * TILE_SIZE - camX, y * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE, color);
         }

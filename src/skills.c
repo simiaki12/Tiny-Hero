@@ -100,7 +100,7 @@ void renderSkills(void) {
 
     char buf[32];
     drawText(listX, 50, "SKILLS", rgb(180, 220, 180), 2);
-    snprintf(buf, sizeof(buf), "Points: %d", player.skillPoints);
+    snprintf(buf, sizeof(buf), " Available points: %d", player.skillPoints);
     uint32_t ptColor = player.skillPoints > 0 ? rgb(255, 220, 80) : rgb(80, 100, 80);
     drawText(listX + 100, 50, buf, ptColor, 2);
 

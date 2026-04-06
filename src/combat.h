@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "enemies.h"
 
 /* --- Enemy capability flags --- */
 #define ENEMY_HAS_WEAPON  (1<<0)  /* can be disarmed */
@@ -8,6 +9,7 @@
 #define ENEMY_STUNNABLE   (1<<3)  /* can be stunned */
 
 typedef struct {
+    char    name[16];
     int     hp;
     int     maxHp;
     uint8_t attack;
@@ -16,8 +18,7 @@ typedef struct {
     uint8_t speed;        /* raises Disarm/Backstab cost; lowers Strong weight */
     uint8_t intelligence; /* raises Calm weight */
     uint8_t perception;   /* lowers Hide/Backstab weight */
-    uint8_t flags;        /* ENEMY_* bitfield — add new flags here freely */
-    uint8_t level;
+    uint8_t flags;        /* ENEMY_* bitfield */
     uint8_t xpReward;
 } Enemy;
 
@@ -75,6 +76,6 @@ typedef struct {
 
 extern CombatState combat;
 
-void startCombat(int enemyLevel);
+void startCombat(const EnemyDef *def);
 void handleCombatInput(int key);
 void renderCombat(void);

@@ -9,6 +9,7 @@
 #include "items.h"
 #include "gfx.h"
 #include "game.h"
+#include "enemies.h"
 #include "combat.h"
 #include "town.h"
 #include "world.h"
@@ -168,15 +169,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
 
     if (!pakOpen("data.pak")) return 1;
 
-    PakData playerData = pakRead("assets/player.dat");
-    PakData itemData   = pakRead("assets/items.dat");
-    PakData dialogData = pakRead("assets/dialog.dat");
+    PakData playerData  = pakRead("assets/player.dat");
+    PakData itemData    = pakRead("assets/items.dat");
+    PakData enemyData   = pakRead("assets/enemies.dat");
+    PakData dialogData  = pakRead("assets/dialog.dat");
 
     if (!loadPlayer(playerData)) { pakClose(); return 1; }
-    loadItems(itemData);    /* optional — falls back to builtins if not in pak */
-    loadDialogs(dialogData);/* optional — falls back to builtins if not in pak */
+    loadItems(itemData);     /* optional — falls back to builtins if not in pak */
+    loadEnemies(enemyData);  /* optional — falls back to builtins if not in pak */
+    loadDialogs(dialogData); /* optional — falls back to builtins if not in pak */
     free(playerData.data);
     free(itemData.data);
+    free(enemyData.data);
     free(dialogData.data);
 
     const int screenW = 640;

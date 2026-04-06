@@ -21,6 +21,7 @@ int main() {
         { "assets/map1.bin",    true  },
         { "assets/player.dat",  true  },
         { "assets/items.dat",   false },
+        { "assets/enemies.dat", false },
         { "assets/dialog.dat",  false },
     };
 

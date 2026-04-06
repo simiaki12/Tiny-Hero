@@ -45,6 +45,16 @@ seed_dialogs:
 	$(CC_HOST) -std=c11 -Os tools/seed_dialogs.c -o build/seed_dialogs
 	./build/seed_dialogs
 
+seed_enemies:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/seed_enemies.c -o build/seed_enemies
+	./build/seed_enemies
+
+migrate_maps:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/migrate_map.c -o build/migrate_map
+	./build/migrate_map assets/map1.bin
+
 tools: map_editor player_editor dialog_editor
 
 clean:

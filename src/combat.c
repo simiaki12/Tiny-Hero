@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "combat.h"
 #include "game.h"
 #include "player.h"
@@ -126,20 +127,18 @@ static void generateActions(void) {
     combat.selectedIndex = 0;
 }
 
-void startCombat(int enemyLevel) {
-    if (enemyLevel < 1) enemyLevel = 1;
-    int hp                    = enemyLevel * 8 + 12;
-    combat.enemy.hp           = hp;
-    combat.enemy.maxHp        = hp;
-    combat.enemy.attack       = (uint8_t)(enemyLevel + 3);
-    combat.enemy.defense      = (uint8_t)(enemyLevel / 2);
-    combat.enemy.size         = 2;
-    combat.enemy.speed        = 2;
-    combat.enemy.intelligence = 1;
-    combat.enemy.perception   = 2;
-    combat.enemy.flags        = ENEMY_HAS_WEAPON | ENEMY_EXECUTABLE | ENEMY_STUNNABLE | ENEMY_BLOCKABLE;
-    combat.enemy.level        = (uint8_t)enemyLevel;
-    combat.enemy.xpReward     = (uint8_t)(enemyLevel * 8 + 7);
+void startCombat(const EnemyDef *def) {
+    memcpy(combat.enemy.name, def->name, 16);
+    combat.enemy.hp           = def->hp;
+    combat.enemy.maxHp        = def->hp;
+    combat.enemy.attack       = def->attack;
+    combat.enemy.defense      = def->defense;
+    combat.enemy.size         = def->size;
+    combat.enemy.speed        = def->speed;
+    combat.enemy.intelligence = def->intelligence;
+    combat.enemy.perception   = def->perception;
+    combat.enemy.flags        = def->flags;
+    combat.enemy.xpReward     = def->xpReward;
     combat.isFirstTurn        = 1;
     combat.skipEnemyAttack    = 0;
     combat.phase              = COMBAT_PHASE_ACTIVE;
@@ -267,8 +266,8 @@ void renderCombat(void) {
         return;
     }
 
-    snprintf(buf, sizeof(buf), "Enemy  Lv.%d  HP: %d / %d",
-             combat.enemy.level, combat.enemy.hp, combat.enemy.maxHp);
+    snprintf(buf, sizeof(buf), "%s   HP: %d / %d",
+             combat.enemy.name, combat.enemy.hp, combat.enemy.maxHp);
     drawText(x, y, buf, rgb(220, 80, 80), 2); y += lineH + 4;
 
     snprintf(buf, sizeof(buf), "Your HP:  %d / %d", playerHp, player.maxHp);

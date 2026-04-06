@@ -9,13 +9,13 @@ typedef enum { ITEM_WEAPON, ITEM_ARMOR, ITEM_CONSUMABLE } ItemType;
 
 #define ITEM_UNEQUIPPED 0xFF
 
-/* 8 bytes — pak-friendly, no pointers */
+/* 20 bytes — pak-friendly, no pointers */
 typedef struct {
+    char    name[16];
     uint8_t type;
     int8_t  attackBonus;
     int8_t  defenseBonus;
     uint8_t flags;
-    uint8_t _pad[4];
 } ItemDef;
 
 typedef struct {

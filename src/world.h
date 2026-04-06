@@ -5,7 +5,16 @@
 #define TILE_SIZE     64
 #define MAX_MAP_TILES (256 * 256)
 
-typedef enum { LOC_EMPTY = 0, LOC_ENEMY = 1, LOC_TOWN = 2, LOC_DUNGEON = 3 } LocType;
+/* Loc tile values stored in mapLoc[]:
+ *   0x00        = empty (walkable, no event)
+ *   0x01-0x0F   = enemy pool IDs 1-15 (step triggers combat from that pool)
+ *   0xFE        = town entrance
+ *   0xFF        = dungeon entrance / map transition
+ */
+#define LOC_EMPTY    0x00
+#define LOC_TOWN     0xFE
+#define LOC_DUNGEON  0xFF
+#define IS_ENEMY_POOL(l) ((uint8_t)(l) >= 0x01 && (uint8_t)(l) <= 0x0F)
 
 extern int     worldPlayerX;
 extern int     worldPlayerY;
