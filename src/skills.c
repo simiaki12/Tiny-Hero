@@ -11,12 +11,12 @@ static int selectedSkill = 0;
 
 const char *skillName(int skill) {
     switch (skill) {
-        case SKILL_BLADES:    return "Blades";
-        case SKILL_SNEAK:     return "Sneak";
-        case SKILL_MAGIC:     return "Magic";
-        case SKILL_DIPLOMACY: return "Diplomacy";
-        case SKILL_SURVIVAL:  return "Survival";
-        case SKILL_ARCHERY:   return "Archery";
+        case SKILL_BLADES:    return "Nycthemeral";
+        case SKILL_SNEAK:     return "Shadowalk";
+        case SKILL_MAGIC:     return "Enchantment";
+        case SKILL_DIPLOMACY: return "The Voice";
+        case SKILL_SURVIVAL:  return "Sanguinomancy";
+        case SKILL_ARCHERY:   return "Valentine Blades";
         default:              return "???";
     }
 }

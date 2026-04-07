@@ -34,16 +34,16 @@ static const ActionDef actionDefs[ACTION_COUNT] = {
 
 static const char *actionName(ActionId id) {
     switch (id) {
-        case ACTION_ATTACK:   return "Attack";
+        case ACTION_ATTACK:   return "Slash";
         case ACTION_STRONG:   return "Strong Attack";
-        case ACTION_HEAL:     return "Heal";
-        case ACTION_DEFEND:   return "Defend";
+        case ACTION_HEAL:     return "Regenerate";
+        case ACTION_DEFEND:   return "Parry";
         case ACTION_DISARM:   return "Disarm";
-        case ACTION_BACKSTAB: return "Backstab";
+        case ACTION_BACKSTAB: return "Moonstep";
         case ACTION_STUN:     return "Stun";
-        case ACTION_CALM:     return "Calm";
-        case ACTION_HIDE:     return "Hide";
-        case ACTION_EXECUTE:  return "Execute";
+        case ACTION_CALM:     return "Persuade";
+        case ACTION_HIDE:     return "Blind spot";
+        case ACTION_EXECUTE:  return "Death star";
         default:              return "???";
     }
 }

@@ -131,7 +131,12 @@ static void renderMenu(void) {
 }
 
 static void handleDeathInput(int key) {
-    if (key == VK_RETURN || key == VK_ESCAPE) startTown();
+
+    if (key == VK_RETURN || key == VK_ESCAPE) 
+    {
+        returnToTown();
+        startTown();
+    }
 }
 
 static void renderDeath(void) {

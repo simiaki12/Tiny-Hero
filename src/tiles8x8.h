@@ -10,14 +10,14 @@ static const uint32_t TILE_PAL[] = {
     0x2d7a00,  /*  2: mid green   */
     0x5cb800,  /*  3: light green */
     0x454545,  /*  4: mortar/crack */
-    0x808080,  /*  5: stone gray  */
+    0x757081,  /*  5: stone gray  */
     0xb8b8b8,  /*  6: stone hi    */
     0x3d1500,  /*  7: dark dirt   */
-    0x8c1a00,  /*  8: blood red   */
+    0xf10c3b,  /*  8: blood red   */
     0xcc9900,  /*  9: gold roof   */
     0xe0d090,  /* 10: cream wall  */
     0x6b3a10,  /* 11: door brown  */
-    0x0d000d,  /* 12: cave shadow */
+    0x75757b,  /* 12: cave shadow */
     0x3d0066,  /* 13: cave glow   */
     0x1428e0,  /* 14: hero blue   */
     0xf0c878,  /* 15: skin tan    */
@@ -143,12 +143,12 @@ static const uint8_t TILE_PORTAL[64] = {
 
 /* --- Player (top-down, transparent bg) -------------------- */
 static const uint8_t SPRITE_PLAYER[64] = {
-     0, 0,15,15,15, 0, 0, 0,
-     0, 0,15,15,15, 0, 0, 0,
-     0,14,14,14,14,14, 0, 0,
-     0,14,14,14,14,14, 0, 0,
-     0,14,14,14,14,14, 0, 0,
-     0,14,14,14,14,14, 0, 0,
-     0, 0,14, 0,14, 0, 0, 0,
-     0, 0,14, 0,14, 0, 0, 0,
+     0, 12,0,0,0, 12, 0, 0,
+     0, 12,12,12,12, 12, 0, 0,
+     0,0,12,12,12,0, 0, 0,
+     0,12,12,8,12,12, 0, 0,
+     0,0,12,12,12,0, 0, 0,
+     0,0,12,12,12,0, 0, 0,
+     0, 0,5, 0,5, 0, 0, 0,
+     0, 0,5, 0,5, 0, 0, 0,
 };

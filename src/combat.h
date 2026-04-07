@@ -80,3 +80,4 @@ extern CombatState combat;
 void startCombat(const EnemyDef *def);
 void handleCombatInput(int key);
 void renderCombat(void);
+void returnToTown(void);

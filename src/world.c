@@ -166,6 +166,12 @@ void handleWorldInput(int key) {
     }
 }
 
+void returnToTown(void) {
+    worldPlayerX = 2;
+    worldPlayerY = 2;
+    worldUpdateCamera();    
+}
+
 void renderWorld(void) {
     /* Cull to only tiles that overlap the viewport */
     int tileX0 = camX / TILE_SIZE;
