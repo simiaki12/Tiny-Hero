@@ -4,6 +4,9 @@
 #include <cstring>
 #include <cstdint>
 #include <iostream>
+#include <filesystem>
+#include <algorithm>
+namespace fs = std::filesystem;
 
 struct PakEntry {
     char name[32];
@@ -17,14 +20,26 @@ struct FileSpec {
 };
 
 int main() {
-    std::vector<FileSpec> specs = {
-        { "assets/map1.bin",    true  },
-        { "assets/player.dat",  true  },
-        { "assets/items.dat",   false },
-        { "assets/enemies.dat", false },
-        { "assets/dialog.dat",  false },
-        { "assets/quests.dat",  false },
-    };
+    /* Auto-discover all map binaries in assets/ */
+    std::vector<std::string> mapBins;
+    if (fs::is_directory("assets")) {
+        for (auto &entry : fs::directory_iterator("assets"))
+            if (entry.path().extension() == ".bin")
+                mapBins.push_back(entry.path().string());
+        std::sort(mapBins.begin(), mapBins.end());
+    }
+    if (mapBins.empty()) {
+        std::cerr << "No map .bin files found in assets/\n";
+        return 1;
+    }
+
+    std::vector<FileSpec> specs;
+    for (auto &m : mapBins) specs.push_back({ m, true });
+    specs.push_back({ "assets/player.dat",  true  });
+    specs.push_back({ "assets/items.dat",   false });
+    specs.push_back({ "assets/enemies.dat", false });
+    specs.push_back({ "assets/dialog.dat",  false });
+    specs.push_back({ "assets/quests.dat",  false });
 
     /* Resolve which files are present */
     std::vector<std::string> files;

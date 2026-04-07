@@ -132,7 +132,7 @@ void handleTownInput(int key) {
         case VK_RETURN:
             switch (townSt.selected) {
                 case 0: startDialog(0, STATE_TOWN); break;
-                case 1: playerHp = player.maxHp;   break;
+                case 1: player.hp = player.maxHp;   break;
                 case 2: state = STATE_WORLD;        break;
             }
             break;

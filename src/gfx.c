@@ -87,6 +87,25 @@ static void drawChar(int x, int y, char c, uint32_t color, int scale) {
                 fillRect(x + col * scale, y + row * scale, scale, scale, color);
 }
 
+void drawSprite8(int dx, int dy, const uint8_t* data, const uint32_t* pal, int scale) {
+    for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
+            uint8_t idx = data[row * 8 + col];
+            if (idx == 0) continue;
+            uint32_t color = pal[idx];
+            int px = dx + col * scale;
+            int py = dy + row * scale;
+            int x1 = px < 0 ? 0 : px;
+            int y1 = py < 0 ? 0 : py;
+            int x2 = px + scale > gfxWidth  ? gfxWidth  : px + scale;
+            int y2 = py + scale > gfxHeight ? gfxHeight : py + scale;
+            for (int sy = y1; sy < y2; sy++)
+                for (int sx = x1; sx < x2; sx++)
+                    g_pixels[sy * gfxWidth + sx] = color;
+        }
+    }
+}
+
 void drawText(int x, int y, const char* text, uint32_t color, int scale) {
     for (int i = 0; text[i]; i++)
         drawChar(x + i * 8 * scale, y, text[i], color, scale);

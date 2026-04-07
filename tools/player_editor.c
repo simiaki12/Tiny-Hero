@@ -14,6 +14,7 @@ typedef struct {
     uint8_t level;
     uint8_t xp;
     uint8_t skillPoints;
+    uint8_t hp;
 } PlayerData;
 
 static PlayerData p;

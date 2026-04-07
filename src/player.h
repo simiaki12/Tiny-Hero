@@ -13,10 +13,10 @@ typedef struct {
     uint8_t level;
     uint8_t xp;
     uint8_t skillPoints;
+    uint8_t hp;
 } PlayerData;
 
 extern PlayerData player;
-extern int playerHp;
 
 int  loadPlayer(PakData data);
 int  xpToNext(void);      /* XP needed to reach the next level */

@@ -54,7 +54,7 @@ static int checkContext(const ActionDef *def) {
     if ((ctx & ACT_CTX_FIRST_TURN)   && !combat.isFirstTurn)                         return 0;
     if ((ctx & ACT_CTX_ENEMY_WEAPON) && !(combat.enemy.flags & ENEMY_HAS_WEAPON))    return 0;
     if ((ctx & ACT_CTX_CAN_STUN)     && !(combat.enemy.flags & ENEMY_STUNNABLE))     return 0;
-    if ((ctx & ACT_CTX_PLAYER_HURT)  && playerHp >= player.maxHp / 2)                return 0;
+    if ((ctx & ACT_CTX_PLAYER_HURT)  && player.hp >= player.maxHp / 2)                return 0;
     if (ctx & ACT_CTX_EXECUTABLE) {
         if (!(combat.enemy.flags & ENEMY_EXECUTABLE))           return 0;
         if (combat.enemy.hp > combat.enemy.maxHp / 3)           return 0;
@@ -165,10 +165,11 @@ static void performPlayerAction(void) {
             combat.enemy.hp -= getAttack() + a->power + player.skills[SKILL_BLADES];
             break;
 
-        case ACTION_HEAL:
-            playerHp += a->power + player.skills[SKILL_SURVIVAL];
-            if (playerHp > player.maxHp) playerHp = player.maxHp;
+        case ACTION_HEAL: {
+            int newHp = (int)player.hp + a->power + player.skills[SKILL_SURVIVAL];
+            player.hp = (uint8_t)(newHp > player.maxHp ? player.maxHp : newHp);
             break;
+        }
 
         case ACTION_DEFEND:
             /* Damage reduction applied below in enemy counter-attack */
@@ -213,7 +214,7 @@ static void performPlayerAction(void) {
         int dmg = combat.enemy.attack;
         if (a->type == ACTION_DEFEND)
             dmg = dmg / 2 + 1;
-        playerHp -= dmg;
+        player.hp = (dmg >= (int)player.hp) ? 0 : (uint8_t)(player.hp - dmg);
     }
 
     if (combat.enemy.hp <= 0) {
@@ -223,7 +224,7 @@ static void performPlayerAction(void) {
         questOnEnemyKilled(combat.enemyDefId);
         return;
     }
-    if (playerHp <= 0) {
+    if (player.hp == 0) {
         enterDeath();
         return;
     }
@@ -275,7 +276,7 @@ void renderCombat(void) {
              combat.enemy.name, combat.enemy.hp, combat.enemy.maxHp);
     drawText(x, y, buf, rgb(220, 80, 80), 2); y += lineH + 4;
 
-    snprintf(buf, sizeof(buf), "Your HP:  %d / %d", playerHp, player.maxHp);
+    snprintf(buf, sizeof(buf), "Your HP:  %d / %d", player.hp, player.maxHp);
     drawText(x, y, buf, rgb(80, 220, 80), 2); y += lineH + 16;
 
     for (int i = 0; i < combat.actionCount; i++) {

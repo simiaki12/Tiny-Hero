@@ -3,15 +3,14 @@
 #include <string.h>
 
 PlayerData player;
-int playerHp = 0;
 
 int loadPlayer(PakData data) {
     if (data.size < 5) return 0; /* need at least: maxHp, attack, defense, weaponId, armorId */
     memset(&player, 0, sizeof(player));
-    if (!player.level) player.level = 1;
     uint32_t n = data.size < sizeof(player) ? data.size : (uint32_t)sizeof(player);
     memcpy(&player, data.data, n);
     if (!player.level) player.level = 1;
+    if (!player.hp)    player.hp    = player.maxHp;
     return 1;
 }
 
@@ -29,7 +28,7 @@ int awardXp(int amount) {
         if (player.attack < 255) player.attack  += 1;
         if (player.defense< 255) player.defense += 1;
         if (player.skillPoints < 255) player.skillPoints++;
-        playerHp = player.maxHp;
+        player.hp = player.maxHp;
         gained++;
     }
     player.xp = (uint8_t)(xp > 255 ? 255 : xp);
@@ -38,6 +37,6 @@ int awardXp(int amount) {
 
 void enterDeath(void) {
     player.xp = 0;        /* lose XP progress within current level — level is kept */
-    playerHp  = player.maxHp; /* healed by the town healer */
+    player.hp  = player.maxHp; /* healed by the town healer */
     state     = STATE_DEATH;
 }

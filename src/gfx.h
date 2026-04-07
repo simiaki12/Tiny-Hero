@@ -14,3 +14,4 @@ uint32_t rgb(uint8_t r, uint8_t g, uint8_t b);
 void     fillRect(int x, int y, int w, int h, uint32_t color);
 void     clearScreen(void);
 void     drawText(int x, int y, const char* text, uint32_t color, int scale);
+void     drawSprite8(int x, int y, const uint8_t* data, const uint32_t* pal, int scale);

@@ -16,6 +16,11 @@
 #define LOC_DUNGEON  0xFF
 #define IS_ENEMY_POOL(l) ((uint8_t)(l) >= 0x01 && (uint8_t)(l) <= 0x0F)
 
+#define LOC_PORTAL_BASE  0xE0
+#define MAX_PORTALS      16
+#define IS_PORTAL(l)     ((uint8_t)(l) >= LOC_PORTAL_BASE && (uint8_t)(l) < LOC_PORTAL_BASE + MAX_PORTALS)
+#define PORTAL_ID(l)     ((uint8_t)(l) - LOC_PORTAL_BASE)
+
 extern int     worldPlayerX;
 extern int     worldPlayerY;
 extern int     camX;
@@ -27,6 +32,10 @@ extern uint8_t mapLoc[MAX_MAP_TILES];
 
 /* Name of the map this map's LOC_DUNGEON tiles lead to. Empty = no transition. */
 extern char mapTransitionTarget[64];
+extern char currentMapName[64];
+extern char    portalTargets[MAX_PORTALS][64];
+extern uint8_t portalSpawnX[MAX_PORTALS];
+extern uint8_t portalSpawnY[MAX_PORTALS];
 
 /* Loads a map by pak name. Sets worldPlayerX/Y to the map's embedded spawn point.
    The pak must already be open. Returns 1 on success, 0 on failure. */

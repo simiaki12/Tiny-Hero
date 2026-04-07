@@ -85,7 +85,7 @@ void getPreviewStats(uint8_t id, int *atkOut, int *defOut, int *hpOut) {
     const ItemDef *d = itemGetDef(id);
     *atkOut = getAttack();
     *defOut = getDefense();
-    *hpOut  = playerHp;
+    *hpOut  = player.hp;
     if (!d) return;
     if (d->type == ITEM_WEAPON)
         *atkOut = player.attack + d->attackBonus;
@@ -123,8 +123,8 @@ void useOrEquipItem(int index) {
         player.armorId = id;
     } else if (d->type == ITEM_CONSUMABLE) {
         if (d->flags & ITEM_FLAG_HEAL) {
-            playerHp += 10;
-            if (playerHp > player.maxHp) playerHp = player.maxHp;
+            int newHp = (int)player.hp + 10;
+            player.hp = (uint8_t)(newHp > player.maxHp ? player.maxHp : newHp);
         }
         removeItem(index);
     }

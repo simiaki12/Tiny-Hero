@@ -116,10 +116,10 @@ static void renderMenu(void) {
         drawText(x, y, buf, rgb(100, 160, 220), 2);
         y += lineH;
 
-        if (preHp != playerHp)
-            snprintf(buf, sizeof(buf), "HP:  %d -> %d / %d", playerHp, preHp, player.maxHp);
+        if (preHp != player.hp)
+            snprintf(buf, sizeof(buf), "HP:  %d -> %d / %d", player.hp, preHp, player.maxHp);
         else
-            snprintf(buf, sizeof(buf), "HP:  %d / %d", playerHp, player.maxHp);
+            snprintf(buf, sizeof(buf), "HP:  %d / %d", player.hp, player.maxHp);
         drawText(x, y, buf, rgb(100, 220, 100), 2);
         y += lineH + 4;
 
@@ -237,7 +237,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
     gfxInit(g_hwnd, screenW, screenH);
 
     if (!worldLoadNamed("assets/map1.bin")) { pakClose(); gfxShutdown(); return 1; }
-    playerHp = player.maxHp;
     /* pak stays open for dynamic map loading during gameplay */
 
     ShowWindow(g_hwnd, nCmdShow);
@@ -293,7 +292,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
         }
 
         gfxPresent(g_hwnd);
-        Sleep(16);
+        Sleep(16); //consider
     }
 
     pakClose();
