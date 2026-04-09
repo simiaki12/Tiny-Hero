@@ -72,3 +72,4 @@ void questOnDialogDone(int treeId);
 
 void handleQuestLogInput(int key);
 void renderQuestLog(void);
+void renderQuestNotifications(void);

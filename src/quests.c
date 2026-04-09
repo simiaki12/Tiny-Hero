@@ -15,6 +15,31 @@ int           questDefCount = 0;
 QuestState    questSt;
 QuestLogState questLogSt;
 
+/* -----------------------------------------------------------------------
+ * Notification queue
+ * ----------------------------------------------------------------------- */
+
+#define NOTIF_MAX     4
+#define NOTIF_DURATION_MS 4000
+
+typedef struct {
+    char  line1[48]; /* "QuestName: Objective 1/1 completed!" */
+    char  line2[24]; /* "+10 XP" or "" */
+    DWORD expiry;
+} QuestNotif;
+
+static QuestNotif g_notifs[NOTIF_MAX];
+static int        g_notifCount = 0;
+
+static void pushNotif(const char *l1, const char *l2) {
+    if (g_notifCount < NOTIF_MAX) {
+        QuestNotif *n = &g_notifs[g_notifCount++];
+        strncpy(n->line1, l1, sizeof(n->line1) - 1); n->line1[sizeof(n->line1)-1] = '\0';
+        strncpy(n->line2, l2, sizeof(n->line2) - 1); n->line2[sizeof(n->line2)-1] = '\0';
+        n->expiry = GetTickCount() + NOTIF_DURATION_MS;
+    }
+}
+
 /* Binary format: [1 byte count][N × sizeof(QuestDef)] */
 int loadQuests(PakData data) {
     memset(&questSt, 0, sizeof(questSt));
@@ -42,6 +67,8 @@ int loadQuests(PakData data) {
  * Internal helpers
  * ----------------------------------------------------------------------- */
 
+static void objTargetName(const QuestObjective *o, char *buf, int bufLen);
+
 /* Try to complete a quest: check all objectives, grant reward if done. */
 static void checkCompletion(int qi) {
     const QuestDef *q = &questDefs[qi];
@@ -50,8 +77,16 @@ static void checkCompletion(int qi) {
             return;
     }
     questSt.status[qi] = QUEST_DONE;
-    if (q->rewardXp)              awardXp(q->rewardXp);
-    if (q->rewardItemId != 0xFF)  addItem(q->rewardItemId);
+    if (q->rewardXp)             awardXp(q->rewardXp);
+    if (q->rewardItemId != 0xFF) addItem(q->rewardItemId);
+
+    char l1[48], l2[24];
+    snprintf(l1, sizeof(l1), "%.23s: Quest complete!", q->name);
+    if (q->rewardXp)
+        snprintf(l2, sizeof(l2), "+%d XP", q->rewardXp);
+    else
+        l2[0] = '\0';
+    pushNotif(l1, l2);
 }
 
 /* Try to activate a quest based on a trigger type + id. */
@@ -71,8 +106,20 @@ static void advanceObjectives(uint8_t objType, uint8_t targetId) {
         for (int j = 0; j < q->objectiveCount; j++) {
             if (q->objectives[j].type != objType) continue;
             if (q->objectives[j].targetId != targetId) continue;
-            if (questSt.progress[i][j] < q->objectives[j].required)
-                questSt.progress[i][j]++;
+            if (questSt.progress[i][j] >= q->objectives[j].required) continue;
+            questSt.progress[i][j]++;
+
+            /* Notify objective progress (only if not yet triggering completion) */
+            if (questSt.progress[i][j] < q->objectives[j].required) {
+                char tgt[20], l1[48];
+                objTargetName(&q->objectives[j], tgt, sizeof(tgt));
+                snprintf(l1, sizeof(l1), "%.14s: %s %d/%d",
+                    q->name,
+                    tgt,
+                    questSt.progress[i][j],
+                    q->objectives[j].required);
+                pushNotif(l1, "");
+            }
         }
         checkCompletion(i);
     }
@@ -270,4 +317,35 @@ void renderQuestLog(void) {
 
     if (!anyShown)
         drawText(textX, y, "No active quests.", rgb(100, 100, 100), scale);
+}
+
+void renderQuestNotifications(void) {
+    if (g_notifCount == 0) return;
+
+    DWORD now = GetTickCount();
+
+    /* Expire old entries */
+    int i = 0;
+    while (i < g_notifCount) {
+        if (now >= g_notifs[i].expiry) {
+            /* Shift remaining down */
+            for (int k = i; k < g_notifCount - 1; k++)
+                g_notifs[k] = g_notifs[k + 1];
+            g_notifCount--;
+        } else {
+            i++;
+        }
+    }
+
+    /* Draw from bottom of stack upward, bottom-left corner */
+    const int lineH  = 14;
+    const int padX   = 8;
+    const int startY = gfxHeight - 12;
+
+    for (int n = g_notifCount - 1; n >= 0; n--) {
+        int y = startY - (g_notifCount - 1 - n) * (lineH * 2 + 4);
+        if (g_notifs[n].line2[0])
+            drawText(padX, y - lineH, g_notifs[n].line2, rgb(255, 220, 80), 1);
+        drawText(padX, y - lineH * 2, g_notifs[n].line1, rgb(180, 230, 180), 1);
+    }
 }

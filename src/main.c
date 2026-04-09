@@ -26,6 +26,8 @@ GameState state = STATE_MAIN_MENU;
 
 static int  g_pendingKey  = 0;
 static char g_pendingChar = 0;
+static DWORD g_savedNotifyEnd = 0;
+#define SAVED_NOTIFY_MS 2000
 
 
 static void handleInventoryInput(int key) {
@@ -265,7 +267,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
         if (g_pendingKey) {
             /* F5 quick-saves from any in-game state */
             if (g_pendingKey == VK_F5 && state != STATE_MAIN_MENU) {
-                saveGameNew();
+                if (saveGameNew())
+                    g_savedNotifyEnd = GetTickCount() + SAVED_NOTIFY_MS;
             /* Escape opens pause from the main gameplay states */
             } else if (g_pendingKey == VK_ESCAPE &&
                        (state == STATE_WORLD || state == STATE_COMBAT || state == STATE_TOWN)) {
@@ -318,6 +321,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
             case STATE_DEATH:      renderDeath();      break;
             case STATE_PAUSE_MENU: renderPauseMenu();  break;
         }
+
+        if (g_savedNotifyEnd && GetTickCount() < g_savedNotifyEnd)
+            drawText(gfxWidth - 72, 8, "SAVED!", rgb(100, 255, 100), 1);
+        renderQuestNotifications();
 
         gfxPresent(g_hwnd);
         Sleep(16); //consider
