@@ -15,6 +15,8 @@ PLR_EDITOR  = build/player_editor
 DLG_EDITOR  = build/dialog_editor
 QST_EDITOR  = build/quest_editor
 IMG_CONV    = build/img_conv
+BW_CONV     = build/bw_conv
+RLE         = build/rle
 
 debug: pack
 	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(SRC) -o $(OUT) $(LDFLAGS)
@@ -70,7 +72,15 @@ img_conv:
 	mkdir -p build
 	$(CC_HOST) -std=c11 -Os tools/img_conv.c -o $(IMG_CONV) -lm
 
-tools: map_editor player_editor dialog_editor quest_editor img_conv
+bw_conv:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/bw_conv.c -o $(BW_CONV) -lm
+
+rle:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/rle.c -o $(RLE)
+
+tools: map_editor player_editor dialog_editor quest_editor img_conv bw_conv rle
 
 clean:
 	rm -rf build data.pak

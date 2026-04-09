@@ -118,9 +118,9 @@ void useOrEquipItem(int index) {
     const ItemDef *d = itemGetDef(id);
     if (!d) return;
     if (d->type == ITEM_WEAPON) {
-        player.weaponId = id;
+        player.weaponId = player.weaponId==id?255:id; /* toggle equip/unequip */
     } else if (d->type == ITEM_ARMOR) {
-        player.armorId = id;
+        player.armorId = player.armorId==id?255:id; /* toggle equip/unequip */
     } else if (d->type == ITEM_CONSUMABLE) {
         if (d->flags & ITEM_FLAG_HEAL) {
             int newHp = (int)player.hp + 10;

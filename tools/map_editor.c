@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <dirent.h>
 
-#define MAX_W        64
-#define MAX_H        64
+#define MAX_W        255
+#define MAX_H        255
 #define MAX_MAPFILES 32
 
 static uint8_t mapGfx[MAX_W * MAX_H];
@@ -375,12 +375,26 @@ int main(int argc, char *argv[]) {
                 clrtoeol();
                 char nameBuf[32] = {0};
                 getnstr(nameBuf, (int)sizeof(nameBuf)-1);
-                noecho(); curs_set(0);
                 if (nameBuf[0]) {
+                    char dimBuf[8] = {0};
+                    mvprintw(mapH + 8, 0, "Width  (1-%d): ", MAX_W);
+                    clrtoeol(); refresh();
+                    getnstr(dimBuf, (int)sizeof(dimBuf)-1);
+                    int newW = atoi(dimBuf);
+                    mvprintw(mapH + 9, 0, "Height (1-%d): ", MAX_H);
+                    clrtoeol(); refresh();
+                    memset(dimBuf, 0, sizeof(dimBuf));
+                    getnstr(dimBuf, (int)sizeof(dimBuf)-1);
+                    int newH = atoi(dimBuf);
+                    noecho(); curs_set(0);
                     snprintf(outfile, sizeof(outfile), "assets/%s.bin", nameBuf);
                     resetMapState();
+                    if (newW >= 1 && newW <= MAX_W) mapW = newW;
+                    if (newH >= 1 && newH <= MAX_H) mapH = newH;
                     fileFound = 0;
                     dirty = 1;
+                } else {
+                    noecho(); curs_set(0);
                 }
                 break;
             }
