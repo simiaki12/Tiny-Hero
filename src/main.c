@@ -15,15 +15,20 @@
 #include "world.h"
 #include "skills.h"
 #include "quests.h"
+#include "mainmenu.h"
+#include "pausemenu.h"
+#include "save.h"
 
 /* State machine */
-GameState state = STATE_WORLD;
+GameState state = STATE_MAIN_MENU;
 
 /* --- Input --- */
 
-static int g_pendingKey = 0;
+static int  g_pendingKey  = 0;
+static char g_pendingChar = 0;
 
-static void handleMenuInput(int key) {
+
+static void handleInventoryInput(int key) {
     switch (key) {
         case VK_UP:
             inventory.selected--;
@@ -48,7 +53,7 @@ static void handleDungeonInput(int key) { if (key == VK_ESCAPE) state = STATE_WO
 
 /* --- Render --- */
 
-static void renderMenu(void) {
+static void renderInventory(void) {
     int x = 60, y = 55;
     const int lineH = 22;
     char buf[48];
@@ -176,6 +181,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         case WM_KEYDOWN:
             g_pendingKey = (int)wp;
             return 0;
+        case WM_CHAR:
+            g_pendingChar = (char)wp;
+            return 0;
         case WM_SIZE:
             gfxResize((int)LOWORD(lp), (int)HIWORD(lp));
             worldUpdateCamera();
@@ -255,8 +263,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
         }
 
         if (g_pendingKey) {
+            /* F5 quick-saves from any in-game state */
+            if (g_pendingKey == VK_F5 && state != STATE_MAIN_MENU) {
+                saveGameNew();
+            /* Escape opens pause from the main gameplay states */
+            } else if (g_pendingKey == VK_ESCAPE &&
+                       (state == STATE_WORLD || state == STATE_COMBAT || state == STATE_TOWN)) {
+                enterPauseMenu(state);
+            /* Pause menu gets both key and char for the save-name form */
+            } else if (state == STATE_PAUSE_MENU) {
+                handlePauseMenuInput(g_pendingKey, g_pendingChar);
             /* P is a global hotkey — opens skills from world, closes from skills */
-            if (g_pendingKey == 'P' && (state == STATE_WORLD || state == STATE_SKILLS)) {
+            } else if (g_pendingKey == 'P' && (state == STATE_WORLD || state == STATE_SKILLS)) {
                 state = (state == STATE_SKILLS) ? STATE_WORLD : STATE_SKILLS;
             /* J toggles the quest log from any non-combat state */
             } else if (g_pendingKey == 'J' && state != STATE_COMBAT) {
@@ -271,29 +289,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
                 switch (state) {
                     case STATE_WORLD:   handleWorldInput(g_pendingKey);   break;
                     case STATE_COMBAT:  handleCombatInput(g_pendingKey);  break;
-                    case STATE_MENU:    handleMenuInput(g_pendingKey);    break;
+                    case STATE_MAIN_MENU: handleMainMenuInput(g_pendingKey); break;
+                    case STATE_INVENTORY: handleInventoryInput(g_pendingKey); break;
                     case STATE_SKILLS:  handleSkillsInput(g_pendingKey);  break;
                     case STATE_DIALOG:  handleDialogInput(g_pendingKey);  break;
                     case STATE_DUNGEON:   handleDungeonInput(g_pendingKey);   break;
                     case STATE_TOWN:     handleTownInput(g_pendingKey);      break;
-                    case STATE_QUEST_LOG: handleQuestLogInput(g_pendingKey); break;
-                    case STATE_DEATH:    handleDeathInput(g_pendingKey);    break;
+                    case STATE_QUEST_LOG:  handleQuestLogInput(g_pendingKey); break;
+                    case STATE_DEATH:      handleDeathInput(g_pendingKey);   break;
+                    case STATE_PAUSE_MENU: break; /* handled above */
                 }
             }
-            g_pendingKey = 0;
+            g_pendingKey  = 0;
+            g_pendingChar = 0;
         }
 
         clearScreen();
         switch (state) {
             case STATE_WORLD:   renderWorld();   break;
             case STATE_COMBAT:  renderCombat();  break;
-            case STATE_MENU:    renderMenu();    break;
+            case STATE_MAIN_MENU: renderMainMenu(); break;
+            case STATE_INVENTORY: renderInventory(); break;
             case STATE_SKILLS:  renderSkills();  break;
             case STATE_DIALOG:  renderDialog();  break;
             case STATE_DUNGEON:   renderDungeon();   break;
             case STATE_TOWN:     renderTown();      break;
             case STATE_QUEST_LOG: renderQuestLog(); break;
-            case STATE_DEATH:    renderDeath();    break;
+            case STATE_DEATH:      renderDeath();      break;
+            case STATE_PAUSE_MENU: renderPauseMenu();  break;
         }
 
         gfxPresent(g_hwnd);

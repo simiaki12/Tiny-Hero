@@ -119,7 +119,7 @@ int worldLoadNamed(const char *name) {
 }
 
 void handleWorldInput(int key) {
-    if (key == 'I') { state = STATE_MENU; return; }
+    if (key == 'I') { state = STATE_INVENTORY; return; }
 
     int newX = worldPlayerX, newY = worldPlayerY;
     switch (key) {

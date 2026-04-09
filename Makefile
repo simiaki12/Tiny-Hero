@@ -14,6 +14,7 @@ MAP_EDITOR  = build/map_editor
 PLR_EDITOR  = build/player_editor
 DLG_EDITOR  = build/dialog_editor
 QST_EDITOR  = build/quest_editor
+IMG_CONV    = build/img_conv
 
 debug: pack
 	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(SRC) -o $(OUT) $(LDFLAGS)
@@ -65,7 +66,11 @@ migrate_maps:
 	$(CC_HOST) -std=c11 -Os tools/migrate_map.c -o build/migrate_map
 	./build/migrate_map assets/map1.bin
 
-tools: map_editor player_editor dialog_editor quest_editor
+img_conv:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/img_conv.c -o $(IMG_CONV) -lm
+
+tools: map_editor player_editor dialog_editor quest_editor img_conv
 
 clean:
 	rm -rf build data.pak
