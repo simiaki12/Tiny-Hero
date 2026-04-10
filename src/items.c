@@ -14,9 +14,9 @@ Inventory inventory = {
 };
 
 static const ItemDef builtinDefs[] = {
-    { "Iron Sword",     ITEM_WEAPON,      3,  0, 0              },
-    { "Leather Armor",  ITEM_ARMOR,       0,  2, 0              },
-    { "Health Potion",  ITEM_CONSUMABLE,  0,  0, ITEM_FLAG_HEAL },
+    { "Iron Sword",    ITEM_WEAPON,     3, 0, 0, 0, 0, 0              },
+    { "Leather Armor", ITEM_ARMOR,      0, 2, 0, 0, 0, 0              },
+    { "Health Potion", ITEM_CONSUMABLE, 0, 0, 0, 0, 0, ITEM_FLAG_HEAL },
 };
 #define BUILTIN_COUNT (int)(sizeof(builtinDefs)/sizeof(builtinDefs[0]))
 
@@ -81,20 +81,43 @@ int getDefense(void) {
     return def;
 }
 
-void getPreviewStats(uint8_t id, int *atkOut, int *defOut, int *hpOut) {
-    const ItemDef *d = itemGetDef(id);
-    *atkOut = getAttack();
-    *defOut = getDefense();
-    *hpOut  = player.hp;
-    if (!d) return;
-    if (d->type == ITEM_WEAPON)
-        *atkOut = player.attack + d->attackBonus;
-    else if (d->type == ITEM_ARMOR)
-        *defOut = player.defense + d->defenseBonus;
-    else if ((d->type == ITEM_CONSUMABLE) && (d->flags & ITEM_FLAG_HEAL)) {
-        *hpOut += 10;
-        if (*hpOut > player.maxHp) *hpOut = player.maxHp;
+int getIntelligence(void) {
+    int val = player.intelligence;
+    if (player.weaponId != ITEM_UNEQUIPPED) {
+        const ItemDef *d = itemGetDef(player.weaponId);
+        if (d) val += d->intelligenceBonus;
     }
+    if (player.armorId != ITEM_UNEQUIPPED) {
+        const ItemDef *d = itemGetDef(player.armorId);
+        if (d) val += d->intelligenceBonus;
+    }
+    return val;
+}
+
+int getPerception(void) {
+    int val = player.perception;
+    if (player.weaponId != ITEM_UNEQUIPPED) {
+        const ItemDef *d = itemGetDef(player.weaponId);
+        if (d) val += d->perceptionBonus;
+    }
+    if (player.armorId != ITEM_UNEQUIPPED) {
+        const ItemDef *d = itemGetDef(player.armorId);
+        if (d) val += d->perceptionBonus;
+    }
+    return val;
+}
+
+int getStamina(void) {
+    int val = player.stamina;
+    if (player.weaponId != ITEM_UNEQUIPPED) {
+        const ItemDef *d = itemGetDef(player.weaponId);
+        if (d) val += d->staminaBonus;
+    }
+    if (player.armorId != ITEM_UNEQUIPPED) {
+        const ItemDef *d = itemGetDef(player.armorId);
+        if (d) val += d->staminaBonus;
+    }
+    return val;
 }
 
 int addItem(uint8_t id) {

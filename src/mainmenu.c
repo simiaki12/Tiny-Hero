@@ -4,8 +4,60 @@
 #include <string.h>
 #include "gfx.h"
 #include "game.h"
+#include "pak.h"
 #include "save.h"
 #include "mainmenu.h"
+
+/* --- Loading screen --- */
+
+static DWORD    g_loadingEnd = 0;
+static PakData  g_loadingImg = {0};
+
+static const char *g_introSeq[]   = { "assets/intro_01.bin", "assets/intro_02.bin", "assets/intro_03.bin", "assets/intro_04.bin" , "assets/intro_05.bin", "assets/intro_06.bin" };
+static const int   g_introCount   = 6;
+static int         g_introIdx     = -1;
+static DWORD       g_introDur     = 0;
+
+static void loadIntroFrame(int idx) {
+    if (g_loadingImg.data) { free(g_loadingImg.data); }
+    g_loadingImg = pakRead((char*)g_introSeq[idx]);
+    g_loadingEnd = GetTickCount() + g_introDur;
+}
+
+void startLoading(DWORD durationMs, char* target) {
+    if (g_loadingImg.data) { free(g_loadingImg.data); }
+    g_loadingImg = pakRead(target);
+    g_loadingEnd = GetTickCount() + durationMs;
+    g_introIdx   = -1;
+    state = STATE_LOADING;
+}
+
+void startIntro(DWORD durationPerFrame) {
+    g_introDur = durationPerFrame;
+    g_introIdx = 0;
+    loadIntroFrame(0);
+    state = STATE_LOADING;
+}
+
+void updateLoading(void) {
+    if (GetTickCount() < g_loadingEnd) return;
+
+    if (g_introIdx >= 0 && g_introIdx < g_introCount - 1) {
+        g_introIdx++;
+        loadIntroFrame(g_introIdx);
+        return;
+    }
+
+    free(g_loadingImg.data);
+    g_loadingImg.data = NULL;
+    g_introIdx = -1;
+    state = STATE_WORLD;
+}
+
+void renderLoading(void) {
+    fillRect(0, 0, gfxWidth, gfxHeight, rgb(0, 0, 0));
+    drawBW(g_loadingImg.data, g_loadingImg.size, rgb(0, 0, 0));
+}
 
 /* --- Top-level menu --- */
 
@@ -74,6 +126,10 @@ static void renderBrowser(void) {
 
 /* --- Public --- */
 
+void handleStartNewGame(void) {
+    startIntro(3000);
+}
+
 void handleMainMenuInput(int key) {
     if (g_inBrowser) { handleBrowserInput(key); return; }
 
@@ -86,7 +142,7 @@ void handleMainMenuInput(int key) {
             break;
         case VK_RETURN:
             switch (g_sel) {
-                case 0: state = STATE_WORLD; break;
+                case 0: handleStartNewGame(); break;
                 case 1: if (anySaveExists()) enterBrowser(); break;
                 case 2: break; /* Options — TODO */
                 case 3: PostQuitMessage(0); break;

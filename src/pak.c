@@ -25,9 +25,18 @@ int pakOpen(const char* filename) {
     return 1;
 }
 
+static int slashEq(const char *a, const char *b) {
+    for (; *a && *b; a++, b++) {
+        char ca = (*a == '\\') ? '/' : *a;
+        char cb = (*b == '\\') ? '/' : *b;
+        if (ca != cb) return 0;
+    }
+    return *a == *b;
+}
+
 const PakEntry* pakFind(const char* name) {
     for (int i = 0; i < pakCount; i++)
-        if (strcmp(name, pakEntries[i].name) == 0)
+        if (slashEq(name, pakEntries[i].name))
             return &pakEntries[i];
     return NULL;
 }

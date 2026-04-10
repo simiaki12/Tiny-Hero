@@ -106,6 +106,50 @@ void drawSprite8(int dx, int dy, const uint8_t* data, const uint32_t* pal, int s
     }
 }
 
+void drawBW(const uint8_t *data, uint32_t size, uint32_t color) {
+    if (!data || size < 4) return;
+    int imgW = (int)(data[0] | (data[1] << 8));
+    int imgH = (int)(data[2] | (data[3] << 8));
+    if (imgW <= 0 || imgH <= 0) return;
+
+    int total = imgW * imgH;
+    uint8_t *bits = malloc(total);
+    if (!bits) return;
+
+    /* decode RLE into flat bitmap */
+    int pixel = 0;
+    uint8_t bit = 0;
+    uint32_t pos = 4;
+    while (pos < size && pixel < total) {
+        int run = data[pos++];
+        for (int i = 0; i < run && pixel < total; i++)
+            bits[pixel++] = bit;
+        bit ^= 1;
+    }
+
+    /* letterbox: largest fit preserving aspect ratio */
+    int drawW, drawH;
+    if (gfxWidth * imgH > gfxHeight * imgW) {
+        drawH = gfxHeight;
+        drawW = imgW * gfxHeight / imgH;
+    } else {
+        drawW = gfxWidth;
+        drawH = imgH * gfxWidth / imgW;
+    }
+    int offX = (gfxWidth  - drawW) / 2;
+    int offY = (gfxHeight - drawH) / 2;
+
+    for (int py = 0; py < drawH; py++) {
+        int sy = py * imgH / drawH;
+        for (int px = 0; px < drawW; px++) {
+            int sx = px * imgW / drawW;
+            g_pixels[(offY + py) * gfxWidth + (offX + px)] = bits[sy * imgW + sx] ? color : 0xFFFFFF;
+        }
+    }
+
+    free(bits);
+}
+
 void drawText(int x, int y, const char* text, uint32_t color, int scale) {
     for (int i = 0; text[i]; i++)
         drawChar(x + i * 8 * scale, y, text[i], color, scale);

@@ -24,7 +24,8 @@ typedef struct {
     uint8_t perception;
     uint8_t flags;          /* EDEF_* bitfield */
     uint8_t xpReward;
-    uint8_t _pad[7];
+    uint8_t goldDrop;       /* max gold dropped; actual = rand(1..goldDrop) */
+    uint8_t _pad[6];
 } EnemyDef;                 /* 32 bytes */
 
 /* 8 bytes — maps a pool ID (loc tile value 0x01-0x0F) to a set of enemy types */

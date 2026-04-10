@@ -20,6 +20,7 @@ typedef struct {
     uint8_t perception;   /* lowers Hide/Backstab weight */
     uint8_t flags;        /* ENEMY_* bitfield */
     uint8_t xpReward;
+    uint8_t goldDrop;
 } Enemy;
 
 typedef enum { COMBAT_PHASE_ACTIVE, COMBAT_PHASE_VICTORY } CombatPhase;
@@ -72,6 +73,7 @@ typedef struct {
     int         skipEnemyAttack;  /* set by actions like Backstab, Stun, Hide */
     CombatPhase phase;
     int         gainedXp;
+    int         gainedGold;
     int         leveledUp;
 } CombatState;
 

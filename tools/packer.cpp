@@ -8,6 +8,11 @@
 #include <algorithm>
 namespace fs = std::filesystem;
 
+static std::string normPath(std::string s) {
+    for (char &c : s) if (c == '\\') c = '/';
+    return s;
+}
+
 struct PakEntry {
     char name[32];
     uint32_t offset;
@@ -25,7 +30,7 @@ int main() {
     if (fs::is_directory("assets")) {
         for (auto &entry : fs::directory_iterator("assets"))
             if (entry.path().extension() == ".bin")
-                mapBins.push_back(entry.path().string());
+                mapBins.push_back(normPath(entry.path().string()));
         std::sort(mapBins.begin(), mapBins.end());
     }
     if (mapBins.empty()) {

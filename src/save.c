@@ -9,7 +9,7 @@
 #include "world.h"
 
 #define SAVE_MAGIC   0x53415645u  /* "SAVE" */
-#define SAVE_VERSION 1
+#define SAVE_VERSION 2
 
 /* Layout (fixed, do not reorder):
  *   4  magic

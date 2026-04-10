@@ -51,6 +51,18 @@ static void handleInventoryInput(int key) {
     }
 }
 
+static GameState g_charSheetReturn;
+
+static void openCharSheet(GameState from) {
+    g_charSheetReturn = from;
+    state = STATE_CHAR_SHEET;
+}
+
+static void handleCharSheetInput(int key) {
+    if (key == VK_ESCAPE || key == 'C')
+        state = g_charSheetReturn;
+}
+
 static void handleDungeonInput(int key) { if (key == VK_ESCAPE) state = STATE_WORLD; }
 
 /* --- Render --- */
@@ -69,24 +81,15 @@ static void renderInventory(void) {
         drawText(x, y, "  (empty)", rgb(120, 120, 120), 2);
     } else {
         for (i = 0; i < inventory.count; i++) {
-            uint8_t id      = inventory.items[i];
-            int     sel     = (i == inventory.selected);
-            uint32_t color  = sel ? rgb(255, 255, 100) : rgb(180, 180, 180);
+            uint8_t id     = inventory.items[i];
+            int     sel    = (i == inventory.selected);
+            uint32_t color = sel ? rgb(255, 255, 100) : rgb(180, 180, 180);
 
-            snprintf(buf, sizeof(buf), "%s%-10s",
-                sel ? "> " : "  ",
-                itemName(id));
-
-            /* Show (E) for currently equipped items */
+            snprintf(buf, sizeof(buf), "%s%-10s", sel ? "> " : "  ", itemName(id));
             if (id == player.weaponId || id == player.armorId) {
                 size_t len = strlen(buf);
-                buf[len]   = ' ';
-                buf[len+1] = '(';
-                buf[len+2] = 'E';
-                buf[len+3] = ')';
-                buf[len+4] = '\0';
+                buf[len] = ' '; buf[len+1] = '('; buf[len+2] = 'E'; buf[len+3] = ')'; buf[len+4] = '\0';
             }
-
             drawText(x, y, buf, color, 2);
             y += lineH;
         }
@@ -97,44 +100,75 @@ static void renderInventory(void) {
     fillRect(x, divY, gfxWidth - 120, 1, rgb(60, 60, 100));
     y = divY + 10;
 
-    /* Item info for selected */
+    /* Stats affected by selected item */
     if (inventory.count > 0) {
-        uint8_t id = inventory.items[inventory.selected];
-        int preAtk, preDef, preHp;
-        getPreviewStats(id, &preAtk, &preDef, &preHp);
+        uint8_t id       = inventory.items[inventory.selected];
+        const ItemDef *d = itemGetDef(id);
 
         drawText(x, y, itemDesc(id), rgb(160, 200, 255), 2);
         y += lineH + 2;
 
-        int curAtk = getAttack();
-        int curDef = getDefense();
+        if (d) {
+            int curAtk = getAttack(), curDef = getDefense();
+            int curInt = getIntelligence(), curPer = getPerception(), curSta = getStamina();
+            int preAtk = curAtk, preDef = curDef, preHp = player.hp;
+            int preInt = curInt, prePer = curPer, preSta = curSta;
 
-        if (preAtk != curAtk)
-            snprintf(buf, sizeof(buf), "ATK: %d -> %d", curAtk, preAtk);
-        else
-            snprintf(buf, sizeof(buf), "ATK: %d", curAtk);
-        drawText(x, y, buf, rgb(220, 100, 100), 2);
-        y += lineH;
+            if (d->type == ITEM_WEAPON) preAtk = player.attack + d->attackBonus;
+            else if (d->type == ITEM_ARMOR) preDef = player.defense + d->defenseBonus;
+            if (d->flags & ITEM_FLAG_HEAL) { preHp += 10; if (preHp > player.maxHp) preHp = player.maxHp; }
+            preInt += d->intelligenceBonus;
+            prePer += d->perceptionBonus;
+            preSta += d->staminaBonus;
 
-        if (preDef != curDef)
-            snprintf(buf, sizeof(buf), "DEF: %d -> %d", curDef, preDef);
-        else
-            snprintf(buf, sizeof(buf), "DEF: %d", curDef);
-        drawText(x, y, buf, rgb(100, 160, 220), 2);
-        y += lineH;
+            #define STAT_ROW(label, cur, pre, col) \
+                if ((pre) != (cur)) snprintf(buf, sizeof(buf), label ": %d -> %d", cur, pre); \
+                else                snprintf(buf, sizeof(buf), label ": %d", cur); \
+                drawText(x, y, buf, col, 2); y += lineH;
 
-        if (preHp != player.hp)
-            snprintf(buf, sizeof(buf), "HP:  %d -> %d / %d", player.hp, preHp, player.maxHp);
-        else
-            snprintf(buf, sizeof(buf), "HP:  %d / %d", player.hp, player.maxHp);
-        drawText(x, y, buf, rgb(100, 220, 100), 2);
-        y += lineH + 4;
-
-        snprintf(buf, sizeof(buf), "LVL: %d", player.level);
-        drawText(x, y, buf, rgb(220, 200, 100), 2); y += lineH;
-        snprintf(buf, sizeof(buf), "XP:  %d / %d", player.xp, xpToNext());
-        drawText(x, y, buf, rgb(180, 160, 80), 2);
+            if (d->attackBonus      || d->type == ITEM_WEAPON)    { STAT_ROW("ATK", curAtk, preAtk, rgb(220, 100, 100)) }
+            if (d->defenseBonus     || d->type == ITEM_ARMOR)     { STAT_ROW("DEF", curDef, preDef, rgb(100, 160, 220)) }
+            if (d->flags & ITEM_FLAG_HEAL)                        { STAT_ROW("HP",  player.hp, preHp, rgb(100, 220, 100)) }
+            if (d->intelligenceBonus)                             { STAT_ROW("INT", curInt, preInt, rgb(180, 100, 220)) }
+            if (d->perceptionBonus)                               { STAT_ROW("PER", curPer, prePer, rgb(220, 180, 100)) }
+            if (d->staminaBonus)                                  { STAT_ROW("STA", curSta, preSta, rgb(100, 220, 180)) }
+            #undef STAT_ROW
+        }
     }
+
+    /* Gold — always shown */
+    snprintf(buf, sizeof(buf), "Gold: %d", player.gold);
+    drawText(x, gfxHeight - 80, buf, rgb(255, 215, 0), 2);
+}
+
+static void renderCharSheet(void) {
+    const int x = 60, lineH = 22;
+    int y = 55;
+    char buf[48];
+
+    fillRect(40, 40, gfxWidth - 80, gfxHeight - 80, rgb(10, 20, 50));
+    drawText(x, y, "CHARACTER", rgb(220, 220, 255), 2);
+    y += lineH + 8;
+
+    #define CSTAT(label, val, col) \
+        snprintf(buf, sizeof(buf), label ": %d", val); \
+        drawText(x, y, buf, col, 2); y += lineH;
+
+    CSTAT("LVL", player.level,       rgb(220, 200, 100))
+    snprintf(buf, sizeof(buf), "XP : %d / %d", player.xp, xpToNext());
+    drawText(x, y, buf, rgb(180, 160, 80), 2); y += lineH;
+    y += 6;
+    snprintf(buf, sizeof(buf), "HP : %d / %d", player.hp, player.maxHp);
+    drawText(x, y, buf, rgb(100, 220, 100), 2); y += lineH;
+    CSTAT("ATK", getAttack(),         rgb(220, 100, 100))
+    CSTAT("DEF", getDefense(),        rgb(100, 160, 220))
+    y += 6;
+    CSTAT("INT", getIntelligence(),   rgb(180, 100, 220))
+    CSTAT("PER", getPerception(),     rgb(220, 180, 100))
+    CSTAT("STA", getStamina(),        rgb(100, 220, 180))
+    #undef CSTAT
+
+    drawText(x, gfxHeight - 80, "C / ESC  to close", rgb(80, 80, 80), 1);
 }
 
 static void handleDeathInput(int key) {
@@ -175,8 +209,8 @@ static void renderDungeon(void) {
 
 /* --- Win32 --- */
 
-static int  g_running = 1;
-static HWND g_hwnd;
+static int g_running = 1;
+HWND       g_hwnd;
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
@@ -288,6 +322,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
                     questLogSt.sel = 0;
                     state = STATE_QUEST_LOG;
                 }
+            /* C toggles the character sheet from any non-combat state */
+            } else if (g_pendingKey == 'C' && state != STATE_COMBAT && state != STATE_MAIN_MENU && state != STATE_LOADING) {
+                if (state == STATE_CHAR_SHEET)
+                    state = g_charSheetReturn;
+                else
+                    openCharSheet(state);
             } else {
                 switch (state) {
                     case STATE_WORLD:   handleWorldInput(g_pendingKey);   break;
@@ -300,17 +340,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
                     case STATE_TOWN:     handleTownInput(g_pendingKey);      break;
                     case STATE_QUEST_LOG:  handleQuestLogInput(g_pendingKey); break;
                     case STATE_DEATH:      handleDeathInput(g_pendingKey);   break;
+                    case STATE_CHAR_SHEET: handleCharSheetInput(g_pendingKey); break;
                     case STATE_PAUSE_MENU: break; /* handled above */
+                    case STATE_LOADING: break;
                 }
             }
             g_pendingKey  = 0;
             g_pendingChar = 0;
         }
 
+        if (state == STATE_LOADING) updateLoading();
+
         clearScreen();
         switch (state) {
             case STATE_WORLD:   renderWorld();   break;
             case STATE_COMBAT:  renderCombat();  break;
+            case STATE_LOADING:   renderLoading();   break;
             case STATE_MAIN_MENU: renderMainMenu(); break;
             case STATE_INVENTORY: renderInventory(); break;
             case STATE_SKILLS:  renderSkills();  break;
@@ -320,6 +365,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
             case STATE_QUEST_LOG: renderQuestLog(); break;
             case STATE_DEATH:      renderDeath();      break;
             case STATE_PAUSE_MENU: renderPauseMenu();  break;
+            case STATE_CHAR_SHEET: renderCharSheet();  break;
         }
 
         if (g_savedNotifyEnd && GetTickCount() < g_savedNotifyEnd)

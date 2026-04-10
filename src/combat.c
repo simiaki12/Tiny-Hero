@@ -143,10 +143,12 @@ void startCombat(const EnemyDef *def) {
     combat.enemy.perception   = def->perception;
     combat.enemy.flags        = def->flags;
     combat.enemy.xpReward     = def->xpReward;
+    combat.enemy.goldDrop     = def->goldDrop;
     combat.isFirstTurn        = 1;
     combat.skipEnemyAttack    = 0;
     combat.phase              = COMBAT_PHASE_ACTIVE;
     combat.gainedXp           = 0;
+    combat.gainedGold         = 0;
     combat.leveledUp          = 0;
     generateActions();
     state = STATE_COMBAT;
@@ -220,6 +222,11 @@ static void performPlayerAction(void) {
     if (combat.enemy.hp <= 0) {
         combat.gainedXp  = combat.enemy.xpReward;
         combat.leveledUp = awardXp(combat.enemy.xpReward);
+        combat.gainedGold = 0;
+        if (combat.enemy.goldDrop > 0) {
+            combat.gainedGold = rand() % combat.enemy.goldDrop + 1;
+            player.gold += (uint16_t)combat.gainedGold;
+        }
         combat.phase     = COMBAT_PHASE_VICTORY;
         questOnEnemyKilled(combat.enemyDefId);
         return;
@@ -262,6 +269,10 @@ void renderCombat(void) {
         drawText(x, y, "VICTORY!", rgb(255, 220, 50), 2); y += lineH + 4;
         snprintf(buf, sizeof(buf), "+%d XP", combat.gainedXp);
         drawText(x, y, buf, rgb(180, 255, 180), 2); y += lineH;
+        if (combat.gainedGold > 0) {
+            snprintf(buf, sizeof(buf), "+%d Gold", combat.gainedGold);
+            drawText(x, y, buf, rgb(255, 215, 0), 2); y += lineH;
+        }
         if (combat.leveledUp) {
             snprintf(buf, sizeof(buf), "LEVEL UP!  Lv.%d", player.level);
             drawText(x, y, buf, rgb(255, 255, 100), 2); y += lineH;

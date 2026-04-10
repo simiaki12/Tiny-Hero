@@ -15,3 +15,4 @@ void     fillRect(int x, int y, int w, int h, uint32_t color);
 void     clearScreen(void);
 void     drawText(int x, int y, const char* text, uint32_t color, int scale);
 void     drawSprite8(int x, int y, const uint8_t* data, const uint32_t* pal, int scale);
+void     drawBW(const uint8_t *data, uint32_t size, uint32_t color);

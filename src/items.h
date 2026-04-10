@@ -9,12 +9,14 @@ typedef enum { ITEM_WEAPON, ITEM_ARMOR, ITEM_CONSUMABLE } ItemType;
 
 #define ITEM_UNEQUIPPED 0xFF
 
-/* 20 bytes — pak-friendly, no pointers */
 typedef struct {
     char    name[16];
     uint8_t type;
     int8_t  attackBonus;
     int8_t  defenseBonus;
+    int8_t  intelligenceBonus;
+    int8_t  perceptionBonus;
+    int8_t  staminaBonus;
     uint8_t flags;
 } ItemDef;
 
@@ -34,7 +36,9 @@ const char *itemName(uint8_t id);
 const char *itemDesc(uint8_t id);
 int         getAttack(void);
 int         getDefense(void);
-void        getPreviewStats(uint8_t id, int *atkOut, int *defOut, int *hpOut);
+int         getIntelligence(void);
+int         getPerception(void);
+int         getStamina(void);
 int         addItem(uint8_t id);
 void        useOrEquipItem(int index);
 void        removeItem(int index);
