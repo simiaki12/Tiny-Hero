@@ -64,6 +64,11 @@ static void handleCharSheetInput(int key) {
         state = g_charSheetReturn;
 }
 
+static void handleLoadingInput(int key) {
+    if(key==VK_ESCAPE)
+        state = STATE_WORLD;
+}
+
 static void handleDungeonInput(int key) { if (key == VK_ESCAPE) state = STATE_WORLD; }
 
 /* --- Render --- */
@@ -345,7 +350,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
                     case STATE_DEATH:      handleDeathInput(g_pendingKey);   break;
                     case STATE_CHAR_SHEET: handleCharSheetInput(g_pendingKey); break;
                     case STATE_PAUSE_MENU: break; /* handled above */
-                    case STATE_LOADING: break;
+                    case STATE_LOADING: handleLoadingInput(g_pendingKey); break;
                 }
             }
             g_pendingKey  = 0;

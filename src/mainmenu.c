@@ -90,7 +90,11 @@ static void handleBrowserInput(int key) {
             break;
         case VK_RETURN:
             if (g_saveCount > 0 && loadGameNamed(g_saveNames[g_browserSel]))
+            {
+                g_inBrowser  = 0;
+                g_browserSel = 0;
                 state = STATE_WORLD;
+            }
             break;
         case VK_ESCAPE:
             g_inBrowser = 0;
@@ -143,7 +147,7 @@ void handleMainMenuInput(int key) {
         case VK_RETURN:
             switch (g_sel) {
                 case 0: handleStartNewGame(); break;
-                case 1: if (anySaveExists()) enterBrowser(); break;
+                case 1: if (anySaveExists()) {enterBrowser(); g_sel=0;} break;
                 case 2: break; /* Options — TODO */
                 case 3: PostQuitMessage(0); break;
             }
