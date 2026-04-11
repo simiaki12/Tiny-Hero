@@ -1,12 +1,14 @@
 #include "player.h"
+#include "items.h"
 #include "game.h"
 #include <string.h>
 
 PlayerData player;
 
 int loadPlayer(PakData data) {
-    if (data.size < 5) return 0; /* need at least: maxHp, attack, defense, weaponId, armorId */
+    if (data.size < 3) return 0;
     memset(&player, 0, sizeof(player));
+    memset(player.equipped, ITEM_UNEQUIPPED, EQUIP_SLOTS);
     uint32_t n = data.size < sizeof(player) ? data.size : (uint32_t)sizeof(player);
     memcpy(&player, data.data, n);
     if (!player.level) player.level = 1;

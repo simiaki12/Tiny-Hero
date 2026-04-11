@@ -18,6 +18,7 @@
 #include "mainmenu.h"
 #include "pausemenu.h"
 #include "save.h"
+#include "loot.h"
 
 /* State machine */
 GameState state = STATE_MAIN_MENU;
@@ -86,7 +87,7 @@ static void renderInventory(void) {
             uint32_t color = sel ? rgb(255, 255, 100) : rgb(180, 180, 180);
 
             snprintf(buf, sizeof(buf), "%s%-10s", sel ? "> " : "  ", itemName(id));
-            if (id == player.weaponId || id == player.armorId) {
+            if (isEquipped(id)) {
                 size_t len = strlen(buf);
                 buf[len] = ' '; buf[len+1] = '('; buf[len+2] = 'E'; buf[len+3] = ')'; buf[len+4] = '\0';
             }
@@ -109,29 +110,25 @@ static void renderInventory(void) {
         y += lineH + 2;
 
         if (d) {
-            int curAtk = getAttack(), curDef = getDefense();
-            int curInt = getIntelligence(), curPer = getPerception(), curSta = getStamina();
-            int preAtk = curAtk, preDef = curDef, preHp = player.hp;
-            int preInt = curInt, prePer = curPer, preSta = curSta;
+            #define STAT_ROW(label, stat, col) { \
+                int cur = getStat(stat), pre = getStatPreview(stat, id); \
+                if (pre != cur) snprintf(buf, sizeof(buf), label ": %d -> %d", cur, pre); \
+                else            snprintf(buf, sizeof(buf), label ": %d", cur); \
+                drawText(x, y, buf, col, 2); y += lineH; }
 
-            if (d->type == ITEM_WEAPON) preAtk = player.attack + d->attackBonus;
-            else if (d->type == ITEM_ARMOR) preDef = player.defense + d->defenseBonus;
-            if (d->flags & ITEM_FLAG_HEAL) { preHp += 10; if (preHp > player.maxHp) preHp = player.maxHp; }
-            preInt += d->intelligenceBonus;
-            prePer += d->perceptionBonus;
-            preSta += d->staminaBonus;
-
-            #define STAT_ROW(label, cur, pre, col) \
-                if ((pre) != (cur)) snprintf(buf, sizeof(buf), label ": %d -> %d", cur, pre); \
-                else                snprintf(buf, sizeof(buf), label ": %d", cur); \
-                drawText(x, y, buf, col, 2); y += lineH;
-
-            if (d->attackBonus      || d->type == ITEM_WEAPON)    { STAT_ROW("ATK", curAtk, preAtk, rgb(220, 100, 100)) }
-            if (d->defenseBonus     || d->type == ITEM_ARMOR)     { STAT_ROW("DEF", curDef, preDef, rgb(100, 160, 220)) }
-            if (d->flags & ITEM_FLAG_HEAL)                        { STAT_ROW("HP",  player.hp, preHp, rgb(100, 220, 100)) }
-            if (d->intelligenceBonus)                             { STAT_ROW("INT", curInt, preInt, rgb(180, 100, 220)) }
-            if (d->perceptionBonus)                               { STAT_ROW("PER", curPer, prePer, rgb(220, 180, 100)) }
-            if (d->staminaBonus)                                  { STAT_ROW("STA", curSta, preSta, rgb(100, 220, 180)) }
+            if (d->attackBonus      || d->type == ITEM_WEAPON)    { STAT_ROW("ATK", STAT_ATK, rgb(220, 100, 100)) }
+            if (d->defenseBonus     || d->type == ITEM_ARMOR)     { STAT_ROW("DEF", STAT_DEF, rgb(100, 160, 220)) }
+            if (d->hpBonus)                                        { STAT_ROW("MHP", STAT_MHP, rgb( 80, 200,  80)) }
+            if (d->intelligenceBonus)                              { STAT_ROW("INT", STAT_INT, rgb(180, 100, 220)) }
+            if (d->perceptionBonus)                                { STAT_ROW("PER", STAT_PER, rgb(220, 180, 100)) }
+            if (d->staminaBonus)                                   { STAT_ROW("STA", STAT_STA, rgb(100, 220, 180)) }
+            if (d->flags & ITEM_FLAG_HEAL) {
+                int preHp = player.hp + 10;
+                if (preHp > player.maxHp) preHp = player.maxHp;
+                if (preHp != player.hp) snprintf(buf, sizeof(buf), "HP : %d -> %d", player.hp, preHp);
+                else                    snprintf(buf, sizeof(buf), "HP : %d", player.hp);
+                drawText(x, y, buf, rgb(100, 220, 100), 2); y += lineH;
+            }
             #undef STAT_ROW
         }
     }
@@ -161,7 +158,7 @@ static void renderCharSheet(void) {
     snprintf(buf, sizeof(buf), "XP : %d / %d", player.xp, xpToNext());
     drawText(x, y, buf, rgb(180, 160, 80), 2); y += lineH;
     y += 6;
-    snprintf(buf, sizeof(buf), "HP : %d / %d", player.hp, player.maxHp);
+    snprintf(buf, sizeof(buf), "HP : %d / %d", player.hp, getMaxHp());
     drawText(x, y, buf, rgb(100, 220, 100), 2); y += lineH;
     CSTAT("ATK", getAttack(),         rgb(220, 100, 100))
     CSTAT("DEF", getDefense(),        rgb(100, 160, 220))
@@ -251,19 +248,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
     PakData playerData  = pakRead("assets/player.dat");
     PakData itemData    = pakRead("assets/items.dat");
     PakData enemyData   = pakRead("assets/enemies.dat");
-    PakData dialogData  = pakRead("assets/dialog.dat");
-    PakData questData   = pakRead("assets/quests.dat");
+    PakData dialogData    = pakRead("assets/dialog.dat");
+    PakData questData     = pakRead("assets/quests.dat");
+    PakData lootData      = pakRead("assets/loottables.dat");
 
     if (!loadPlayer(playerData)) { pakClose(); return 1; }
-    loadItems(itemData);     /* optional — falls back to builtins if not in pak */
-    loadEnemies(enemyData);  /* optional — falls back to builtins if not in pak */
-    loadDialogs(dialogData); /* optional — falls back to builtins if not in pak */
-    loadQuests(questData);   /* optional — no quests if absent */
+    loadItems(itemData);        /* optional — falls back to builtins if not in pak */
+    loadEnemies(enemyData);     /* optional — falls back to builtins if not in pak */
+    loadDialogs(dialogData);    /* optional — falls back to builtins if not in pak */
+    loadQuests(questData);      /* optional — no quests if absent */
+    loadLootTables(lootData);   /* optional — no item drops if absent */
     free(playerData.data);
     free(itemData.data);
     free(enemyData.data);
     free(dialogData.data);
     free(questData.data);
+    free(lootData.data);
 
     const int screenW = 640;
     const int screenH = 480;

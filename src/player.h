@@ -3,12 +3,19 @@
 #include "pak.h"
 #include "skills.h"
 
+#define EQUIP_SLOTS 8   /* total equipment array size; expand slot types as needed */
+
+typedef enum {
+    SLOT_WEAPON = 0,
+    SLOT_ARMOR  = 1,
+    EQUIP_SLOT_COUNT = 2   /* number of defined slot types */
+} EquipSlot;
+
 typedef struct {
     uint8_t  maxHp;
     uint8_t  attack;
     uint8_t  defense;
-    uint8_t  weaponId;
-    uint8_t  armorId;
+    uint8_t  equipped[EQUIP_SLOTS]; /* indexed by EquipSlot; 0xFF = empty */
     uint8_t  skills[SKILL_MAX];
     uint8_t  level;
     uint8_t  xp;

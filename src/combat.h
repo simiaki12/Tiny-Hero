@@ -21,6 +21,7 @@ typedef struct {
     uint8_t flags;        /* ENEMY_* bitfield */
     uint8_t xpReward;
     uint8_t goldDrop;
+    uint8_t lootTableId;
 } Enemy;
 
 typedef enum { COMBAT_PHASE_ACTIVE, COMBAT_PHASE_VICTORY } CombatPhase;
@@ -75,6 +76,8 @@ typedef struct {
     int         gainedXp;
     int         gainedGold;
     int         leveledUp;
+    uint8_t     droppedItems[4]; /* item IDs from loot rolls */
+    int         droppedCount;
 } CombatState;
 
 extern CombatState combat;

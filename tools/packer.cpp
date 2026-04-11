@@ -43,8 +43,9 @@ int main() {
     specs.push_back({ "assets/player.dat",  true  });
     specs.push_back({ "assets/items.dat",   false });
     specs.push_back({ "assets/enemies.dat", false });
-    specs.push_back({ "assets/dialog.dat",  false });
-    specs.push_back({ "assets/quests.dat",  false });
+    specs.push_back({ "assets/dialog.dat",     false });
+    specs.push_back({ "assets/quests.dat",     false });
+    specs.push_back({ "assets/loottables.dat", false });
 
     /* Resolve which files are present */
     std::vector<std::string> files;

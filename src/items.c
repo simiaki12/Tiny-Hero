@@ -14,9 +14,9 @@ Inventory inventory = {
 };
 
 static const ItemDef builtinDefs[] = {
-    { "Iron Sword",    ITEM_WEAPON,     3, 0, 0, 0, 0, 0              },
-    { "Leather Armor", ITEM_ARMOR,      0, 2, 0, 0, 0, 0              },
-    { "Health Potion", ITEM_CONSUMABLE, 0, 0, 0, 0, 0, ITEM_FLAG_HEAL },
+    { "Iron Sword",    ITEM_WEAPON,      3, 0, 0, 0, 0, 0, 0,              15, "A reliable iron blade.",  {0} },
+    { "Leather Armor", ITEM_ARMOR,       0, 2, 0, 0, 0, 0, 0,              12, "Light but protective.",   {0} },
+    { "Health Potion", ITEM_CONSUMABLE,  0, 0, 0, 0, 0, 0, ITEM_FLAG_HEAL,  8, "Restores 10 HP.",         {0} },
 };
 #define BUILTIN_COUNT (int)(sizeof(builtinDefs)/sizeof(builtinDefs[0]))
 
@@ -44,81 +44,85 @@ const char *itemName(uint8_t id) {
 }
 
 const char *itemDesc(uint8_t id) {
-    static char buf[32];
     const ItemDef *d = itemGetDef(id);
-    if (!d) return "";
+    if (!d || !d->description[0]) return "";
+    return d->description;
+}
+
+int itemSlot(const ItemDef *d) {
+    if (!d) return -1;
     switch (d->type) {
-        case ITEM_WEAPON:
-            snprintf(buf, sizeof(buf), "%+d ATK", d->attackBonus);
-            return buf;
-        case ITEM_ARMOR:
-            snprintf(buf, sizeof(buf), "%+d DEF", d->defenseBonus);
-            return buf;
-        case ITEM_CONSUMABLE:
-            if (d->flags & ITEM_FLAG_HEAL)        return "Restores HP";
-            if (d->flags & ITEM_FLAG_BUFF_ATTACK)  return "Boosts ATK";
-            return "Consumable";
-        default:
-            return "";
+        case ITEM_WEAPON: return SLOT_WEAPON;
+        case ITEM_ARMOR:  return SLOT_ARMOR;
+        default:          return -1;
     }
 }
 
-int getAttack(void) {
-    int atk = player.attack;
-    if (player.weaponId != ITEM_UNEQUIPPED) {
-        const ItemDef *d = itemGetDef(player.weaponId);
-        if (d) atk += d->attackBonus;
-    }
-    return atk;
+int isEquipped(uint8_t id) {
+    for (int i = 0; i < EQUIP_SLOTS; i++)
+        if (player.equipped[i] == id) return 1;
+    return 0;
 }
 
-int getDefense(void) {
-    int def = player.defense;
-    if (player.armorId != ITEM_UNEQUIPPED) {
-        const ItemDef *d = itemGetDef(player.armorId);
-        if (d) def += d->defenseBonus;
+static int bonusOf(const ItemDef *d, StatType stat) {
+    if (!d) return 0;
+    switch (stat) {
+        case STAT_ATK: return d->attackBonus;
+        case STAT_DEF: return d->defenseBonus;
+        case STAT_MHP: return d->hpBonus;
+        case STAT_INT: return d->intelligenceBonus;
+        case STAT_PER: return d->perceptionBonus;
+        case STAT_STA: return d->staminaBonus;
+        default:       return 0;
     }
-    return def;
 }
 
-int getIntelligence(void) {
-    int val = player.intelligence;
-    if (player.weaponId != ITEM_UNEQUIPPED) {
-        const ItemDef *d = itemGetDef(player.weaponId);
-        if (d) val += d->intelligenceBonus;
+static int baseStat(StatType stat) {
+    switch (stat) {
+        case STAT_ATK: return player.attack;
+        case STAT_DEF: return player.defense;
+        case STAT_MHP: return player.maxHp;
+        case STAT_INT: return player.intelligence;
+        case STAT_PER: return player.perception;
+        case STAT_STA: return player.stamina;
+        default:       return 0;
     }
-    if (player.armorId != ITEM_UNEQUIPPED) {
-        const ItemDef *d = itemGetDef(player.armorId);
-        if (d) val += d->intelligenceBonus;
-    }
+}
+
+int getStat(StatType stat) {
+    int val = baseStat(stat);
+    for (int i = 0; i < EQUIP_SLOTS; i++)
+        if (player.equipped[i] != ITEM_UNEQUIPPED)
+            val += bonusOf(itemGetDef(player.equipped[i]), stat);
     return val;
 }
 
-int getPerception(void) {
-    int val = player.perception;
-    if (player.weaponId != ITEM_UNEQUIPPED) {
-        const ItemDef *d = itemGetDef(player.weaponId);
-        if (d) val += d->perceptionBonus;
+int getStatPreview(StatType stat, uint8_t itemId) {
+    const ItemDef *newItem = itemGetDef(itemId);
+    if (!newItem) return getStat(stat);
+    int slot = itemSlot(newItem);
+    if (slot < 0) return getStat(stat); /* consumable — no equip bonus change */
+
+    uint8_t curId = player.equipped[slot];
+    if (curId == itemId) return getStat(stat); /* already equipped — no change to show */
+
+    /* Preview: replace whatever is in this slot with the new item */
+    int result = baseStat(stat);
+    for (int i = 0; i < EQUIP_SLOTS; i++) {
+        if (i == slot) continue;
+        if (player.equipped[i] != ITEM_UNEQUIPPED)
+            result += bonusOf(itemGetDef(player.equipped[i]), stat);
     }
-    if (player.armorId != ITEM_UNEQUIPPED) {
-        const ItemDef *d = itemGetDef(player.armorId);
-        if (d) val += d->perceptionBonus;
-    }
-    return val;
+    result += bonusOf(newItem, stat);
+    return result;
 }
 
-int getStamina(void) {
-    int val = player.stamina;
-    if (player.weaponId != ITEM_UNEQUIPPED) {
-        const ItemDef *d = itemGetDef(player.weaponId);
-        if (d) val += d->staminaBonus;
-    }
-    if (player.armorId != ITEM_UNEQUIPPED) {
-        const ItemDef *d = itemGetDef(player.armorId);
-        if (d) val += d->staminaBonus;
-    }
-    return val;
-}
+int getAttack(void)      { return getStat(STAT_ATK); }
+int getDefense(void)     { return getStat(STAT_DEF); }
+int getMaxHp(void)       { return getStat(STAT_MHP); }
+int getIntelligence(void){ return getStat(STAT_INT); }
+int getPerception(void)  { return getStat(STAT_PER); }
+int getStamina(void)     { return getStat(STAT_STA); }
 
 int addItem(uint8_t id) {
     if (inventory.count >= 16) return 0;
@@ -140,10 +144,10 @@ void useOrEquipItem(int index) {
     uint8_t id = inventory.items[index];
     const ItemDef *d = itemGetDef(id);
     if (!d) return;
-    if (d->type == ITEM_WEAPON) {
-        player.weaponId = player.weaponId==id?255:id; /* toggle equip/unequip */
-    } else if (d->type == ITEM_ARMOR) {
-        player.armorId = player.armorId==id?255:id; /* toggle equip/unequip */
+    int slot = itemSlot(d);
+    if (slot >= 0) {
+        /* toggle: unequip if already in this slot, otherwise equip (replacing whatever was there) */
+        player.equipped[slot] = (player.equipped[slot] == id) ? ITEM_UNEQUIPPED : id;
     } else if (d->type == ITEM_CONSUMABLE) {
         if (d->flags & ITEM_FLAG_HEAL) {
             int newHp = (int)player.hp + 10;

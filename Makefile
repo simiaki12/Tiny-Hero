@@ -58,6 +58,21 @@ seed_dialogs:
 	$(CC_HOST) -std=c11 -Os tools/seed_dialogs.c -o build/seed_dialogs
 	./build/seed_dialogs
 
+seed_player:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/seed_player.c -o build/seed_player
+	./build/seed_player
+
+seed_items:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/seed_items.c -o build/seed_items
+	./build/seed_items
+
+seed_loottables:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/seed_loottables.c -o build/seed_loottables
+	./build/seed_loottables
+
 seed_enemies:
 	mkdir -p build
 	$(CC_HOST) -std=c11 -Os tools/seed_enemies.c -o build/seed_enemies
@@ -80,7 +95,15 @@ rle:
 	mkdir -p build
 	$(CC_HOST) -std=c11 -Os tools/rle.c -o $(RLE)
 
-tools: map_editor player_editor dialog_editor quest_editor img_conv bw_conv rle
+item_editor:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os -Wno-unused-result tools/item_editor.c -o build/item_editor -lncurses
+
+loottable_editor:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os -Wno-unused-result tools/loottable_editor.c -o build/loottable_editor -lncurses
+
+tools: map_editor player_editor dialog_editor quest_editor item_editor loottable_editor img_conv bw_conv rle
 
 clean:
 	rm -rf build data.pak

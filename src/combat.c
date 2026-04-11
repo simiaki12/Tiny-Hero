@@ -10,7 +10,7 @@
 #include "skills.h"
 #include "gfx.h"
 #include "quests.h"
-#include "player.h"
+#include "loot.h"
 
 CombatState combat;
 
@@ -144,12 +144,14 @@ void startCombat(const EnemyDef *def) {
     combat.enemy.flags        = def->flags;
     combat.enemy.xpReward     = def->xpReward;
     combat.enemy.goldDrop     = def->goldDrop;
+    combat.enemy.lootTableId  = def->lootTableId;
     combat.isFirstTurn        = 1;
     combat.skipEnemyAttack    = 0;
     combat.phase              = COMBAT_PHASE_ACTIVE;
     combat.gainedXp           = 0;
     combat.gainedGold         = 0;
     combat.leveledUp          = 0;
+    combat.droppedCount       = 0;
     generateActions();
     state = STATE_COMBAT;
 }
@@ -227,6 +229,7 @@ static void performPlayerAction(void) {
             combat.gainedGold = rand() % combat.enemy.goldDrop + 1;
             player.gold += (uint16_t)combat.gainedGold;
         }
+        rollLoot(combat.enemy.lootTableId, combat.droppedItems, &combat.droppedCount);
         combat.phase     = COMBAT_PHASE_VICTORY;
         questOnEnemyKilled(combat.enemyDefId);
         return;
@@ -275,6 +278,10 @@ void renderCombat(void) {
             else
                 snprintf(buf, sizeof(buf), "+%d Solmarks", combat.gainedGold);
             drawText(x, y, buf, rgb(255, 215, 0), 2); y += lineH;
+        }
+        for (int i = 0; i < combat.droppedCount; i++) {
+            snprintf(buf, sizeof(buf), "Found: %s", itemName(combat.droppedItems[i]));
+            drawText(x, y, buf, rgb(180, 255, 220), 2); y += lineH;
         }
         if (combat.leveledUp) {
             snprintf(buf, sizeof(buf), "LEVEL UP!  Lv.%d", player.level);

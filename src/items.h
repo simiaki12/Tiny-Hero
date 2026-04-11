@@ -9,15 +9,20 @@ typedef enum { ITEM_WEAPON, ITEM_ARMOR, ITEM_CONSUMABLE } ItemType;
 
 #define ITEM_UNEQUIPPED 0xFF
 
+/* 64 bytes — pak-friendly, no pointers */
 typedef struct {
-    char    name[16];
-    uint8_t type;
-    int8_t  attackBonus;
-    int8_t  defenseBonus;
-    int8_t  intelligenceBonus;
-    int8_t  perceptionBonus;
-    int8_t  staminaBonus;
-    uint8_t flags;
+    char     name[16];
+    uint8_t  type;
+    int8_t   attackBonus;
+    int8_t   defenseBonus;
+    int8_t   intelligenceBonus;
+    int8_t   perceptionBonus;
+    int8_t   staminaBonus;
+    int8_t   hpBonus;
+    uint8_t  flags;
+    uint16_t price;
+    char     description[24];
+    uint8_t  _pad[14];
 } ItemDef;
 
 typedef struct {
@@ -34,11 +39,29 @@ int         loadItems(PakData data);
 const ItemDef *itemGetDef(uint8_t id);
 const char *itemName(uint8_t id);
 const char *itemDesc(uint8_t id);
+typedef enum {
+    STAT_ATK = 0,
+    STAT_DEF,
+    STAT_MHP,
+    STAT_INT,
+    STAT_PER,
+    STAT_STA,
+    STAT_COUNT
+} StatType;
+
+int         itemSlot(const ItemDef *d);            /* EquipSlot index, or -1 if not equippable */
+int         isEquipped(uint8_t id);
+int         getStat(StatType stat);                /* base + all equipped bonuses */
+int         getStatPreview(StatType stat, uint8_t itemId); /* getStat after equipping/toggling itemId */
+
+/* Convenience wrappers */
 int         getAttack(void);
 int         getDefense(void);
+int         getMaxHp(void);
 int         getIntelligence(void);
 int         getPerception(void);
 int         getStamina(void);
+
 int         addItem(uint8_t id);
 void        useOrEquipItem(int index);
 void        removeItem(int index);
