@@ -4,22 +4,23 @@
 /* Palette index 0 = transparent (skipped by drawSprite8).
    Tiles use only indices 1-15 (fully opaque).
    Player sprite uses 0 for see-through pixels. */
+/* Locked indices (used by SPRITE_PLAYER): 0, 5, 8, 12 — do not change. */
 static const uint32_t TILE_PAL[] = {
-    0x000000,  /*  0: transparent */
-    0x1a4d00,  /*  1: dark green  */
-    0x2d7a00,  /*  2: mid green   */
-    0x5cb800,  /*  3: light green */
-    0x454545,  /*  4: mortar/crack */
-    0x757081,  /*  5: stone gray  */
-    0xb8b8b8,  /*  6: stone hi    */
-    0x3d1500,  /*  7: dark dirt   */
-    0xf10c3b,  /*  8: blood red   */
-    0xcc9900,  /*  9: gold roof   */
-    0xe0d090,  /* 10: cream wall  */
-    0x6b3a10,  /* 11: door brown  */
-    0x75757b,  /* 12: cave shadow */
-    0x3d0066,  /* 13: cave glow   */
-    0x1428e0,  /* 14: hero blue   */
+    0x000000,  /*  0: transparent [locked] */
+    0x1e5c00,  /*  1: dark green  */
+    0x3a8c00,  /*  2: mid green   */
+    0x64c800,  /*  3: light green */
+    0x303030,  /*  4: mortar/crack */
+    0x757081,  /*  5: stone gray  [locked] */
+    0xc8c8c8,  /*  6: stone hi    */
+    0x4a2008,  /*  7: dark dirt   */
+    0xf10c3b,  /*  8: blood red   [locked] */
+    0xd4a000,  /*  9: gold roof   */
+    0xe8d8a0,  /* 10: cream wall  */
+    0x7a4018,  /* 11: door brown  */
+    0x75757b,  /* 12: cave shadow [locked] */
+    0x8800cc,  /* 13: cave glow   */
+    0x1870d8,  /* 14: water blue  */
     0xf0c878,  /* 15: skin tan    */
 };
 
@@ -139,6 +140,114 @@ static const uint8_t TILE_PORTAL[64] = {
     13,13,12,12,12,12,13,13,
     12,13,13,12,12,13,13,12,
     12,12,13,13,13,13,12,12,
+};
+
+/* --- Tree (top-down canopy; 7=trunk) ---------------------- */
+static const uint8_t TILE_TREE[64] = {
+    2,3,3,3,3,3,2,2,
+    3,2,1,2,1,2,3,2,
+    3,1,2,2,2,1,3,2,
+    3,2,2,7,2,2,3,2,
+    3,1,2,2,2,1,3,2,
+    3,2,1,2,1,2,3,2,
+    2,3,3,3,3,3,2,2,
+    2,2,7,7,7,2,2,2,
+};
+
+/* --- River (flows left-right; 14=water, 12=dark water) ---- */
+static const uint8_t TILE_RIVER[64] = {
+    1,2,2,2,2,2,2,1,
+    2,2,2,2,2,2,2,2,
+    14,14,12,14,14,12,14,14,
+    14,12,14,14,12,14,14,14,
+    12,14,14,12,14,14,14,12,
+    14,14,12,14,14,12,14,14,
+    2,2,2,2,2,2,2,2,
+    1,2,2,2,2,2,2,1,
+};
+
+/* --- Bridge (wooden planks over water) -------------------- */
+static const uint8_t TILE_BRIDGE[64] = {
+    14,14,14,14,14,14,14,14,
+     7,11, 7,11, 7,11, 7,11,
+    11,11,11,11,11,11,11,11,
+     7,11, 7,11, 7,11, 7,11,
+    11,11,11,11,11,11,11,11,
+     7,11, 7,11, 7,11, 7,11,
+    11,11,11,11,11,11,11,11,
+    14,14,14,14,14,14,14,14,
+};
+
+/* --- Road (cobblestone) ----------------------------------- */
+static const uint8_t TILE_ROAD[64] = {
+    5,5,4,5,5,5,4,5,
+    5,6,4,5,6,5,4,5,
+    4,4,4,4,4,4,4,4,
+    5,5,4,5,5,5,4,5,
+    5,5,4,6,5,5,4,6,
+    4,4,4,4,4,4,4,4,
+    5,5,4,5,5,5,4,5,
+    5,6,4,5,5,6,4,5,
+};
+
+/* --- Building floor (stone flags) ------------------------- */
+static const uint8_t TILE_BUILDING_FLOOR[64] = {
+    5,5,5,4,5,5,5,4,
+    5,6,5,4,5,5,6,4,
+    5,5,5,4,5,5,5,4,
+    4,4,4,4,4,4,4,4,
+    5,5,5,4,5,5,5,4,
+    5,5,6,4,5,6,5,4,
+    5,5,5,4,5,5,5,4,
+    4,4,4,4,4,4,4,4,
+};
+
+/* --- Hills (rolling terrain, passable) -------------------- */
+static const uint8_t TILE_HILLS[64] = {
+    3,3,3,2,2,3,3,3,
+    3,3,2,2,2,2,3,3,
+    3,2,2,1,1,2,2,3,
+    2,2,1,1,1,1,2,2,
+    2,1,1,2,2,1,1,2,
+    1,1,2,2,2,2,1,1,
+    1,2,2,3,3,2,2,1,
+    2,2,3,3,3,3,2,2,
+};
+
+/* --- Mountains (blocking; 5=stone, 6=snow, 4=crack) ------- */
+static const uint8_t TILE_MOUNTAINS[64] = {
+    4,5,6,5,4,5,6,4,
+    5,6,6,4,5,6,6,5,
+    6,4,6,5,6,4,6,6,
+    4,5,4,6,4,5,4,4,
+    5,4,5,4,5,4,5,6,
+    4,5,6,5,4,5,6,4,
+    5,6,4,6,5,6,4,5,
+    6,4,5,4,6,4,5,6,
+};
+
+/* --- Cave floor (dark ground) ----------------------------- */
+static const uint8_t TILE_CAVE_FLOOR[64] = {
+    12,12, 4,12,12,12, 4,12,
+    12, 4,12,12, 4,12,12, 4,
+     4,12,12, 4,12,12, 4,12,
+    12,12, 4,12,12, 4,12,12,
+    12, 4,12,12, 4,12,12,12,
+     4,12,12, 4,12,12, 4,12,
+    12,12, 4,12,12, 4,12, 4,
+    12, 4,12,12, 4,12,12,12,
+};
+
+/* --- Cave wall (rocky with glow; 12=shadow, 13=glow, 4=crack) */
+static const uint8_t TILE_CAVE_WALL[64] = {
+    12, 4,12, 4,12,12, 4,12,
+     4,12, 4,12, 4, 4,12, 4,
+    12, 4,13, 4,12,13, 4,12,
+     4,12, 4,12, 4, 4,12, 4,
+    12, 4,12, 4,13,12, 4,12,
+     4,13, 4,12, 4, 4,12, 4,
+    12, 4,12, 4,12,13, 4,12,
+     4,12, 4,12, 4, 4,12, 4,
 };
 
 /* --- Player (top-down, transparent bg) -------------------- */

@@ -9,6 +9,20 @@
 #define MAX_H        255
 #define MAX_MAPFILES 32
 
+/* mapGfx tile types — keep in sync with src/world.h */
+#define GFX_GRASS          0
+#define GFX_WALL           1
+#define GFX_TREE           2
+#define GFX_RIVER          3
+#define GFX_BRIDGE         4
+#define GFX_ROAD           5
+#define GFX_BUILDING_FLOOR 6
+#define GFX_HILLS          7
+#define GFX_MOUNTAINS      8
+#define GFX_CAVE_FLOOR     9
+#define GFX_CAVE_WALL      10
+#define IS_GFX_PASSABLE(g) ((g)==GFX_GRASS||(g)==GFX_BRIDGE||(g)==GFX_ROAD||(g)==GFX_BUILDING_FLOOR||(g)==GFX_HILLS||(g)==GFX_CAVE_FLOOR)
+
 static uint8_t mapGfx[MAX_W * MAX_H];
 static uint8_t mapLoc[MAX_W * MAX_H];
 static int mapW = 10, mapH = 8;
@@ -151,30 +165,71 @@ static void saveMap(void) {
     fclose(f);
 }
 
+static const char *gfxName(uint8_t gfx) {
+    switch (gfx) {
+        case GFX_GRASS:          return "grass";
+        case GFX_WALL:           return "wall";
+        case GFX_TREE:           return "tree";
+        case GFX_RIVER:          return "river";
+        case GFX_BRIDGE:         return "bridge";
+        case GFX_ROAD:           return "road";
+        case GFX_BUILDING_FLOOR: return "building floor";
+        case GFX_HILLS:          return "hills";
+        case GFX_MOUNTAINS:      return "mountains";
+        case GFX_CAVE_FLOOR:     return "cave floor";
+        case GFX_CAVE_WALL:      return "cave wall";
+        default:                 return "?";
+    }
+}
+
 static void drawMap(void) {
     for (int y = 0; y < mapH; y++) {
         for (int x = 0; x < mapW; x++) {
-            int idx = y * mapW + x;
+            int     idx = y * mapW + x;
+            uint8_t gfx = mapGfx[idx];
+            uint8_t loc = mapLoc[idx];
             char ch;
-            int attr;
-            if (x == spawnX && y == spawnY && mapGfx[idx] == 0) {
+            int  attr;
+
+            if (x == spawnX && y == spawnY && IS_GFX_PASSABLE(gfx)) {
                 ch = '@'; attr = COLOR_PAIR(6);
-            } else if (mapGfx[idx] == 1) {
-                ch = '#'; attr = COLOR_PAIR(1);
             } else {
-                uint8_t loc = mapLoc[idx];
-                if (loc >= 1 && loc <= 15) {
-                    ch = (loc <= 9) ? ('0' + loc) : ('A' + loc - 10);
-                    attr = COLOR_PAIR(2);
-                } else if (loc == 0xFE) {
-                    ch = 'T'; attr = COLOR_PAIR(3);
-                } else if (loc == 0xFF) {
-                    ch = 'D'; attr = COLOR_PAIR(4);
-                } else if (loc >= LOC_PORTAL_BASE && loc < LOC_PORTAL_BASE + MAX_PORTALS) {
-                    ch = 'a' + (loc - LOC_PORTAL_BASE);
-                    attr = COLOR_PAIR(7);
-                } else {
-                    ch = '.'; attr = COLOR_PAIR(5);
+                switch (gfx) {
+                    case GFX_WALL:
+                        ch = '#'; attr = COLOR_PAIR(1); break;
+                    case GFX_TREE:
+                        ch = '^'; attr = COLOR_PAIR(5) | A_BOLD; break;
+                    case GFX_RIVER:
+                        ch = '~'; attr = COLOR_PAIR(7); break;
+                    case GFX_BRIDGE:
+                        ch = '='; attr = COLOR_PAIR(3); break;
+                    case GFX_ROAD:
+                        ch = ':'; attr = COLOR_PAIR(1); break;
+                    case GFX_BUILDING_FLOOR:
+                        ch = '+'; attr = COLOR_PAIR(6); break;
+                    case GFX_HILLS:
+                        ch = 'n'; attr = COLOR_PAIR(5); break;
+                    case GFX_MOUNTAINS:
+                        ch = 'M'; attr = COLOR_PAIR(1) | A_BOLD; break;
+                    case GFX_CAVE_FLOOR:
+                        ch = ','; attr = COLOR_PAIR(4); break;
+                    case GFX_CAVE_WALL:
+                        ch = '%'; attr = COLOR_PAIR(4) | A_BOLD; break;
+                    default: /* GFX_GRASS — show loc overlay */
+                        if (loc >= 1 && loc <= 15) {
+                            ch = (loc <= 9) ? ('0' + loc) : ('A' + loc - 10);
+                            attr = COLOR_PAIR(2);
+                        } else if (loc == 0xFE) {
+                            ch = 'T'; attr = COLOR_PAIR(3);
+                        } else if (loc == 0xFF) {
+                            ch = 'D'; attr = COLOR_PAIR(4);
+                        } else if (loc >= LOC_PORTAL_BASE && loc < LOC_PORTAL_BASE + MAX_PORTALS) {
+                            ch = 'a' + (loc - LOC_PORTAL_BASE);
+                            attr = COLOR_PAIR(7);
+                        } else {
+                            ch = '.'; attr = COLOR_PAIR(5);
+                        }
+                        break;
                 }
             }
             if (x == curX && y == curY) attr |= A_REVERSE;
@@ -224,11 +279,11 @@ int main(int argc, char *argv[]) {
             attron(COLOR_PAIR(2));
             mvprintw(1, 0, "WARNING: '%s' not found — starting blank map", outfile);
             attroff(COLOR_PAIR(2));
-            mvprintw(2, 0, "Arrows=move  W=wall  F=floor  1-9=enemy pool  T=town  D=dungeon  R=portal  C=clear  P=spawn  S=save  O=open  N=new  Q=quit");
         } else {
-            mvprintw(1, 0, "Arrows=move  W=wall  F=floor  1-9=enemy pool  T=town  D=dungeon  R=portal  C=clear  P=spawn  S=save  O=open  N=new  Q=quit");
-            mvprintw(2, 0, "Legend: #=wall  .=floor  1-9=enemy  T=town  D=dungeon  a-p=portal  @=spawn");
+            mvprintw(1, 0, "Arrows=move  W=wall  F=floor  A=tree  V=river  B=bridge  K=road  U=bldg  H=hills  M=mount  E=cavefloor  X=cavewall");
+            mvprintw(2, 0, "1-9=enemy  T=town  D=dungeon  R=portal  C=clear  P=spawn  S=save  O=open  N=new  Q=quit");
         }
+        mvprintw(!fileFound ? 2 : 3, 0, "Legend: #=wall ^=tree ~=river ==bridge :=road +=bldg n=hills M=mount ,=cavefloor %%=cavewall .=floor");
 
         drawMap();
         {
@@ -247,8 +302,8 @@ int main(int argc, char *argv[]) {
                          portalSpawnX[pid], portalSpawnY[pid]);
                 locDesc = poolBuf;
             } else                locDesc = "?";
-            mvprintw(mapH + 4, 0, "cursor (%d,%d)  gfx=%d  loc=%s",
-                     curX, curY, mapGfx[curY * mapW + curX], locDesc);
+            mvprintw(mapH + 4, 0, "cursor (%d,%d)  gfx=%s  loc=%s",
+                     curX, curY, gfxName(mapGfx[curY * mapW + curX]), locDesc);
         }
         refresh();
 
@@ -260,16 +315,52 @@ int main(int argc, char *argv[]) {
             case KEY_LEFT:  if (curX > 0)      curX--; break;
             case KEY_RIGHT: if (curX < mapW-1) curX++; break;
             case ' ':
-                mapGfx[idx] ^= 1;
-                if (mapGfx[idx]) mapLoc[idx] = 0;
+                if (IS_GFX_PASSABLE(mapGfx[idx])) { mapGfx[idx] = GFX_WALL; mapLoc[idx] = 0; }
+                else                               { mapGfx[idx] = GFX_GRASS; }
                 dirty = 1;
                 break;
             case 'w': case 'W':
-                mapGfx[idx] = 1; mapLoc[idx] = 0;
+                mapGfx[idx] = GFX_WALL; mapLoc[idx] = 0;
                 dirty = 1;
                 break;
             case 'f': case 'F':
-                mapGfx[idx] = 0;
+                mapGfx[idx] = GFX_GRASS;
+                dirty = 1;
+                break;
+            case 'a': case 'A':
+                mapGfx[idx] = GFX_TREE; mapLoc[idx] = 0;
+                dirty = 1;
+                break;
+            case 'v': case 'V':
+                mapGfx[idx] = GFX_RIVER; mapLoc[idx] = 0;
+                dirty = 1;
+                break;
+            case 'b': case 'B':
+                mapGfx[idx] = GFX_BRIDGE; mapLoc[idx] = 0;
+                dirty = 1;
+                break;
+            case 'k': case 'K':
+                mapGfx[idx] = GFX_ROAD; mapLoc[idx] = 0;
+                dirty = 1;
+                break;
+            case 'u': case 'U':
+                mapGfx[idx] = GFX_BUILDING_FLOOR; mapLoc[idx] = 0;
+                dirty = 1;
+                break;
+            case 'h': case 'H':
+                mapGfx[idx] = GFX_HILLS; mapLoc[idx] = 0;
+                dirty = 1;
+                break;
+            case 'm': case 'M':
+                mapGfx[idx] = GFX_MOUNTAINS; mapLoc[idx] = 0;
+                dirty = 1;
+                break;
+            case 'e': case 'E':
+                mapGfx[idx] = GFX_CAVE_FLOOR; mapLoc[idx] = 0;
+                dirty = 1;
+                break;
+            case 'x': case 'X':
+                mapGfx[idx] = GFX_CAVE_WALL; mapLoc[idx] = 0;
                 dirty = 1;
                 break;
             case '1': case '2': case '3': case '4':
@@ -286,11 +377,11 @@ int main(int argc, char *argv[]) {
                 dirty = 1;
                 break;
             case 'c': case 'C':
-                mapLoc[idx] = 0;
+                mapGfx[idx] = GFX_GRASS; mapLoc[idx] = 0;
                 dirty = 1;
                 break;
             case 'p': case 'P':
-                if (mapGfx[idx] == 0) {
+                if (IS_GFX_PASSABLE(mapGfx[idx])) {
                     spawnX = curX;
                     spawnY = curY;
                     dirty = 1;

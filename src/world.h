@@ -5,6 +5,21 @@
 #define TILE_SIZE     64
 #define MAX_MAP_TILES (256 * 256)
 
+/* mapGfx tile type constants */
+#define GFX_GRASS          0
+#define GFX_WALL           1
+#define GFX_TREE           2
+#define GFX_RIVER          3
+#define GFX_BRIDGE         4
+#define GFX_ROAD           5
+#define GFX_BUILDING_FLOOR 6
+#define GFX_HILLS          7
+#define GFX_MOUNTAINS      8
+#define GFX_CAVE_FLOOR     9
+#define GFX_CAVE_WALL      10
+
+#define IS_GFX_PASSABLE(g) ((g)==GFX_GRASS||(g)==GFX_BRIDGE||(g)==GFX_ROAD||(g)==GFX_BUILDING_FLOOR||(g)==GFX_HILLS||(g)==GFX_CAVE_FLOOR)
+
 /* Loc tile values stored in mapLoc[]:
  *   0x00        = empty (walkable, no event)
  *   0x01-0x0F   = enemy pool IDs 1-15 (step triggers combat from that pool)

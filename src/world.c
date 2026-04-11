@@ -132,7 +132,7 @@ void handleWorldInput(int key) {
 
     if (newX >= 0 && newX < mapWidth &&
         newY >= 0 && newY < mapHeight &&
-        mapGfx[newY * mapWidth + newX] == 0) {
+        IS_GFX_PASSABLE(mapGfx[newY * mapWidth + newX])) {
         worldPlayerX = newX;
         worldPlayerY = newY;
         worldUpdateCamera();
@@ -186,20 +186,27 @@ void renderWorld(void) {
     int scale = TILE_SIZE / 8;
     for (int y = tileY0; y < tileY1; y++) {
         for (int x = tileX0; x < tileX1; x++) {
-            uint8_t  loc  = mapLoc[y * mapWidth + x];
+            uint8_t        gfx = mapGfx[y * mapWidth + x];
+            uint8_t        loc = mapLoc[y * mapWidth + x];
             const uint8_t *tile;
-            if (mapGfx[y * mapWidth + x] == 1) {
-                tile = TILE_WALL;
-            } else if (IS_ENEMY_POOL(loc)) {
-                tile = TILE_ENEMY_POOLS[(loc - 1) % TILE_ENEMY_POOL_COUNT];
-            } else if (loc == LOC_TOWN) {
-                tile = TILE_TOWN;
-            } else if (loc == LOC_DUNGEON) {
-                tile = TILE_DUNGEON;
-            } else if (IS_PORTAL(loc)) {
-                tile = TILE_PORTAL;
-            } else {
-                tile = TILE_GRASS;
+            switch (gfx) {
+                case GFX_WALL:           tile = TILE_WALL;           break;
+                case GFX_TREE:           tile = TILE_TREE;           break;
+                case GFX_RIVER:          tile = TILE_RIVER;          break;
+                case GFX_BRIDGE:         tile = TILE_BRIDGE;         break;
+                case GFX_ROAD:           tile = TILE_ROAD;           break;
+                case GFX_BUILDING_FLOOR: tile = TILE_BUILDING_FLOOR; break;
+                case GFX_HILLS:          tile = TILE_HILLS;          break;
+                case GFX_MOUNTAINS:      tile = TILE_MOUNTAINS;      break;
+                case GFX_CAVE_FLOOR:     tile = TILE_CAVE_FLOOR;     break;
+                case GFX_CAVE_WALL:      tile = TILE_CAVE_WALL;      break;
+                default: /* GFX_GRASS: select by loc */
+                    if      (IS_ENEMY_POOL(loc)) tile = TILE_ENEMY_POOLS[(loc - 1) % TILE_ENEMY_POOL_COUNT];
+                    else if (loc == LOC_TOWN)    tile = TILE_TOWN;
+                    else if (loc == LOC_DUNGEON) tile = TILE_DUNGEON;
+                    else if (IS_PORTAL(loc))     tile = TILE_PORTAL;
+                    else                         tile = TILE_GRASS;
+                    break;
             }
             drawSprite8(x * TILE_SIZE - camX, y * TILE_SIZE - camY, tile, TILE_PAL, scale);
         }
