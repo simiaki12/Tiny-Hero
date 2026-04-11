@@ -270,7 +270,10 @@ void renderCombat(void) {
         snprintf(buf, sizeof(buf), "+%d XP", combat.gainedXp);
         drawText(x, y, buf, rgb(180, 255, 180), 2); y += lineH;
         if (combat.gainedGold > 0) {
-            snprintf(buf, sizeof(buf), "+%d Gold", combat.gainedGold);
+            if(combat.gainedGold ==1)
+                snprintf(buf, sizeof(buf), "+%d Solmark", combat.gainedGold);
+            else
+                snprintf(buf, sizeof(buf), "+%d Solmarks", combat.gainedGold);
             drawText(x, y, buf, rgb(255, 215, 0), 2); y += lineH;
         }
         if (combat.leveledUp) {

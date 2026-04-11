@@ -137,7 +137,10 @@ static void renderInventory(void) {
     }
 
     /* Gold — always shown */
-    snprintf(buf, sizeof(buf), "Gold: %d", player.gold);
+    if(player.gold <=1)
+        snprintf(buf, sizeof(buf), "Solmark: %d", player.gold);
+    else
+        snprintf(buf, sizeof(buf), "Solmarks: %d", player.gold);
     drawText(x, gfxHeight - 80, buf, rgb(255, 215, 0), 2);
 }
 
