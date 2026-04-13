@@ -4,7 +4,7 @@ CC_HOST  = gcc
 CFLAGS   = -Wall -Wextra -std=c11
 DEBUGFLAGS   = -g
 RELEASEFLAGS = -Os -flto
-LDFLAGS        = -lgdi32 -mwindows
+LDFLAGS        = -lgdi32 -lwinmm -mwindows
 LDFLAGS_STATIC = $(LDFLAGS) -static-libgcc
 
 SRC    = $(wildcard src/*.c)
@@ -24,6 +24,11 @@ debug: pack
 release: pack
 	$(CC) $(CFLAGS) $(RELEASEFLAGS) $(SRC) -o $(OUT) $(LDFLAGS_STATIC) -s
 	ls -lh $(OUT)
+
+gen_world_music:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/gen_world_music.c -o build/gen_world_music
+	./build/gen_world_music
 
 packer:
 	mkdir -p build

@@ -19,9 +19,16 @@
 #include "pausemenu.h"
 #include "save.h"
 #include "loot.h"
+#include "audio.h"
 
 /* State machine */
-GameState state = STATE_MAIN_MENU;
+GameState state     = STATE_MAIN_MENU;
+GameState prevState = STATE_MAIN_MENU;
+
+/* Overlay states sit on top of the world and don't affect music. */
+#define IS_OVERLAY(s) ((s)==STATE_INVENTORY||(s)==STATE_SKILLS|| \
+                       (s)==STATE_QUEST_LOG||(s)==STATE_CHAR_SHEET|| \
+                       (s)==STATE_PAUSE_MENU||(s)==STATE_DIALOG)
 
 /* --- Input --- */
 
@@ -357,6 +364,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
             g_pendingChar = 0;
         }
 
+        /* Music: only react to real state changes, not overlay transitions */
+        if (state != prevState && !IS_OVERLAY(state) && !IS_OVERLAY(prevState)) {
+            if (state == STATE_WORLD)
+                audioPlayWorld();
+            else
+                audioStop();
+        }
+        prevState = state;
+
         if (state == STATE_LOADING) updateLoading();
 
         clearScreen();
@@ -384,6 +400,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
         Sleep(16); //consider
     }
 
+    audioCleanup();
     pakClose();
     gfxShutdown();
     return 0;
