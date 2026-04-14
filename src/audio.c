@@ -90,6 +90,12 @@ static float voice_tick(Voice *v, const Note *seq, int n) {
     return s;
 }
 
+/* --- Volume (0–10) --- */
+static volatile int s_vol = 8;
+
+void audioSetVolume(int v) { s_vol = v < 0 ? 0 : v > 10 ? 10 : v; }
+int  audioGetVolume(void)  { return s_vol; }
+
 /* --- waveOut streaming --- */
 static HWAVEOUT       s_wo     = NULL;
 static HANDLE         s_thread = NULL;
@@ -99,12 +105,13 @@ static int16_t        s_pcm[NBUFS][BUFSZ];
 static WAVEHDR        s_hdr[NBUFS];
 
 static void fill(int16_t *buf, int n) {
+    float vol = s_vol / 10.0f;
     for (int i = 0; i < n; i++) {
         float v = voice_tick(&s_mv, s_mel, MEL_N) * 0.52f
                 + voice_tick(&s_bv, s_bas, BAS_N) * 0.32f;
         if (v >  1.0f) v =  1.0f;
         if (v < -1.0f) v = -1.0f;
-        buf[i] = (int16_t)(v * 26000);
+        buf[i] = (int16_t)(v * 26000.0f * vol);
     }
 }
 

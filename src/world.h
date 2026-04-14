@@ -57,5 +57,6 @@ extern uint8_t portalSpawnY[MAX_PORTALS];
 int  worldLoadNamed(const char *name);
 void worldUpdateCamera(void);
 
+void updateWorld(void);
 void handleWorldInput(int key);
 void renderWorld(void);

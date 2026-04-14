@@ -11,8 +11,17 @@
 #include "quests.h"
 #include "tiles8x8.h"
 
-int     worldPlayerX = 2;
-int     worldPlayerY = 2;
+int     worldPlayerX  = 2;
+int     worldPlayerY  = 2;
+static int   g_walkFrame   = 0;
+static int   g_moving      = 0;
+static int   g_slideStartX = 0;
+static int   g_slideStartY = 0;
+static int   g_camSlideX   = 0;
+static int   g_camSlideY   = 0;
+static DWORD g_moveStart   = 0;
+static int   g_midToggled  = 0;
+#define SLIDE_MS 200
 int     camX         = 0;
 int     camY         = 0;
 int     mapWidth     = 0;
@@ -118,8 +127,27 @@ int worldLoadNamed(const char *name) {
     return ok;
 }
 
+void updateWorld(void) {
+    if (!g_moving) return;
+    DWORD elapsed = GetTickCount() - g_moveStart;
+    if (elapsed >= SLIDE_MS) {
+        g_camSlideX = 0;
+        g_camSlideY = 0;
+        g_moving    = 0;
+    } else {
+        if (!g_midToggled && elapsed >= SLIDE_MS / 2) {
+            g_walkFrame  ^= 1;
+            g_midToggled  = 1;
+        }
+        int rem      = (int)(SLIDE_MS - elapsed);
+        g_camSlideX  = g_slideStartX * rem / SLIDE_MS;
+        g_camSlideY  = g_slideStartY * rem / SLIDE_MS;
+    }
+}
+
 void handleWorldInput(int key) {
     if (key == 'I') { state = STATE_INVENTORY; return; }
+    if (g_moving) return;
 
     int newX = worldPlayerX, newY = worldPlayerY;
     switch (key) {
@@ -133,9 +161,19 @@ void handleWorldInput(int key) {
     if (newX >= 0 && newX < mapWidth &&
         newY >= 0 && newY < mapHeight &&
         IS_GFX_PASSABLE(mapGfx[newY * mapWidth + newX])) {
+        int oldCamX  = camX;
+        int oldCamY  = camY;
         worldPlayerX = newX;
         worldPlayerY = newY;
+        g_walkFrame ^= 1;
         worldUpdateCamera();
+        g_slideStartX = oldCamX - camX;
+        g_slideStartY = oldCamY - camY;
+        g_camSlideX   = g_slideStartX;
+        g_camSlideY   = g_slideStartY;
+        g_moveStart   = GetTickCount();
+        g_midToggled  = 0;
+        g_moving      = 1;
 
         uint8_t loc = mapLoc[newY * mapWidth + newX];
         if (loc) questOnZoneEntered(loc);
@@ -173,11 +211,16 @@ void returnToTown(void) {
 }
 
 void renderWorld(void) {
+    /* Apply slide offset: during animation rCam lags behind the logical camera,
+       making the viewport glide smoothly to the new position. */
+    int rCamX = camX + g_camSlideX;
+    int rCamY = camY + g_camSlideY;
+
     /* Cull to only tiles that overlap the viewport */
-    int tileX0 = camX / TILE_SIZE;
-    int tileY0 = camY / TILE_SIZE;
-    int tileX1 = (camX + gfxWidth  + TILE_SIZE - 1) / TILE_SIZE;
-    int tileY1 = (camY + gfxHeight + TILE_SIZE - 1) / TILE_SIZE;
+    int tileX0 = rCamX / TILE_SIZE;
+    int tileY0 = rCamY / TILE_SIZE;
+    int tileX1 = (rCamX + gfxWidth  + TILE_SIZE - 1) / TILE_SIZE;
+    int tileY1 = (rCamY + gfxHeight + TILE_SIZE - 1) / TILE_SIZE;
     if (tileX0 < 0) tileX0 = 0;
     if (tileY0 < 0) tileY0 = 0;
     if (tileX1 > mapWidth)  tileX1 = mapWidth;
@@ -208,9 +251,10 @@ void renderWorld(void) {
                     else                         tile = TILE_GRASS;
                     break;
             }
-            drawSprite8(x * TILE_SIZE - camX, y * TILE_SIZE - camY, tile, TILE_PAL, scale);
+            drawSprite8(x * TILE_SIZE - rCamX, y * TILE_SIZE - rCamY, tile, TILE_PAL, scale);
         }
     }
-    drawSprite8(worldPlayerX * TILE_SIZE - camX, worldPlayerY * TILE_SIZE - camY,
-                SPRITE_PLAYER, TILE_PAL, scale);
+    const uint8_t *playerSprite = g_walkFrame ? SPRITE_PLAYER_2 : SPRITE_PLAYER;
+    drawSprite8(worldPlayerX * TILE_SIZE - rCamX, worldPlayerY * TILE_SIZE - rCamY,
+                playerSprite, TILE_PAL, scale);
 }

@@ -6,6 +6,7 @@
 #include "game.h"
 #include "save.h"
 #include "pausemenu.h"
+#include "options.h"
 
 #define PAUSE_ITEMS 4
 static const char *g_labels[PAUSE_ITEMS] = {
@@ -65,7 +66,7 @@ void handlePauseMenuInput(int key, char ch) {
             switch (g_sel) {
                 case 0: state = g_returnState; break;           /* Resume */
                 case 1: g_inForm = 1; g_nameLen = 0; g_name[0] = '\0'; break; /* Save */
-                case 2: break;                                  /* Options — TODO */
+                case 2: enterOptions(STATE_PAUSE_MENU); break;  /* Options */
                 case 3: state = STATE_MAIN_MENU; break;         /* Exit to menu */
             }
             break;

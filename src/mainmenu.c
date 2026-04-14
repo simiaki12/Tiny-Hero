@@ -7,6 +7,7 @@
 #include "pak.h"
 #include "save.h"
 #include "mainmenu.h"
+#include "options.h"
 
 /* --- Loading screen --- */
 
@@ -148,7 +149,7 @@ void handleMainMenuInput(int key) {
             switch (g_sel) {
                 case 0: handleStartNewGame(); break;
                 case 1: if (anySaveExists()) {enterBrowser(); g_sel=0;} break;
-                case 2: break; /* Options — TODO */
+                case 2: enterOptions(STATE_MAIN_MENU); break; /* Options */
                 case 3: PostQuitMessage(0); break;
             }
             break;

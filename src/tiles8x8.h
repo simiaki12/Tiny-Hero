@@ -250,7 +250,7 @@ static const uint8_t TILE_CAVE_WALL[64] = {
      4,12, 4,12, 4, 4,12, 4,
 };
 
-/* --- Player (top-down, transparent bg) -------------------- */
+/* --- Player walk frame A (arms out, legs neutral) --------- */
 static const uint8_t SPRITE_PLAYER[64] = {
      0, 12,0,0,0, 12, 0, 0,
      0, 12,12,12,12, 12, 0, 0,
@@ -260,4 +260,16 @@ static const uint8_t SPRITE_PLAYER[64] = {
      0,0,12,12,12,0, 0, 0,
      0, 0,5, 0,5, 0, 0, 0,
      0, 0,5, 0,5, 0, 0, 0,
+};
+
+/* --- Player walk frame B (arms tucked, legs wide) ---------- */
+static const uint8_t SPRITE_PLAYER_2[64] = {
+     0, 12,0,0,0, 12, 0, 0,
+     0, 12,12,12,12, 12, 0, 0,
+     0,0,12,12,12,0, 0, 0,
+     0, 0,12,8,12,0, 0, 0,
+     0,12,12,12,12,12, 0, 0,
+     0,0,12,12,12,0, 0, 0,
+     0, 5,0, 0,0, 5, 0, 0,
+     0, 5,0, 0,0, 5, 0, 0,
 };

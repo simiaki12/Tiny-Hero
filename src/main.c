@@ -20,6 +20,7 @@
 #include "save.h"
 #include "loot.h"
 #include "audio.h"
+#include "options.h"
 
 /* State machine */
 GameState state     = STATE_MAIN_MENU;
@@ -28,7 +29,8 @@ GameState prevState = STATE_MAIN_MENU;
 /* Overlay states sit on top of the world and don't affect music. */
 #define IS_OVERLAY(s) ((s)==STATE_INVENTORY||(s)==STATE_SKILLS|| \
                        (s)==STATE_QUEST_LOG||(s)==STATE_CHAR_SHEET|| \
-                       (s)==STATE_PAUSE_MENU||(s)==STATE_DIALOG)
+                       (s)==STATE_PAUSE_MENU||(s)==STATE_DIALOG|| \
+                       (s)==STATE_OPTIONS)
 
 /* --- Input --- */
 
@@ -356,6 +358,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
                     case STATE_QUEST_LOG:  handleQuestLogInput(g_pendingKey); break;
                     case STATE_DEATH:      handleDeathInput(g_pendingKey);   break;
                     case STATE_CHAR_SHEET: handleCharSheetInput(g_pendingKey); break;
+                    case STATE_OPTIONS:     handleOptionsInput(g_pendingKey); break;
                     case STATE_PAUSE_MENU: break; /* handled above */
                     case STATE_LOADING: handleLoadingInput(g_pendingKey); break;
                 }
@@ -374,6 +377,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
         prevState = state;
 
         if (state == STATE_LOADING) updateLoading();
+        if (state == STATE_WORLD)   updateWorld();
 
         clearScreen();
         switch (state) {
@@ -390,6 +394,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
             case STATE_DEATH:      renderDeath();      break;
             case STATE_PAUSE_MENU: renderPauseMenu();  break;
             case STATE_CHAR_SHEET: renderCharSheet();  break;
+            case STATE_OPTIONS:    renderOptions();    break;
         }
 
         if (g_savedNotifyEnd && GetTickCount() < g_savedNotifyEnd)
