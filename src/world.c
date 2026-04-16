@@ -13,14 +13,20 @@
 
 int     worldPlayerX  = 2;
 int     worldPlayerY  = 2;
-static int   g_walkFrame   = 0;
-static int   g_moving      = 0;
-static int   g_slideStartX = 0;
-static int   g_slideStartY = 0;
-static int   g_camSlideX   = 0;
-static int   g_camSlideY   = 0;
-static DWORD g_moveStart   = 0;
-static int   g_midToggled  = 0;
+static int   g_walkFrame      = 0;
+static int   g_moving         = 0;
+/* Camera slide: oldCamX - newCamX. May be 0 or partial near edges. */
+static int   g_camSlideStartX = 0;
+static int   g_camSlideStartY = 0;
+static int   g_camSlideX      = 0;
+static int   g_camSlideY      = 0;
+/* Player offset: always ±TILE_SIZE, independent of camera movement. */
+static int   g_plrOffStartX   = 0;
+static int   g_plrOffStartY   = 0;
+static int   g_plrOffX        = 0;
+static int   g_plrOffY        = 0;
+static DWORD g_moveStart      = 0;
+static int   g_midToggled     = 0;
 #define SLIDE_MS 200
 int     camX         = 0;
 int     camY         = 0;
@@ -133,6 +139,8 @@ void updateWorld(void) {
     if (elapsed >= SLIDE_MS) {
         g_camSlideX = 0;
         g_camSlideY = 0;
+        g_plrOffX   = 0;
+        g_plrOffY   = 0;
         g_moving    = 0;
     } else {
         if (!g_midToggled && elapsed >= SLIDE_MS / 2) {
@@ -140,8 +148,10 @@ void updateWorld(void) {
             g_midToggled  = 1;
         }
         int rem      = (int)(SLIDE_MS - elapsed);
-        g_camSlideX  = g_slideStartX * rem / SLIDE_MS;
-        g_camSlideY  = g_slideStartY * rem / SLIDE_MS;
+        g_camSlideX  = g_camSlideStartX * rem / SLIDE_MS;
+        g_camSlideY  = g_camSlideStartY * rem / SLIDE_MS;
+        g_plrOffX    = g_plrOffStartX   * rem / SLIDE_MS;
+        g_plrOffY    = g_plrOffStartY   * rem / SLIDE_MS;
     }
 }
 
@@ -161,16 +171,24 @@ void handleWorldInput(int key) {
     if (newX >= 0 && newX < mapWidth &&
         newY >= 0 && newY < mapHeight &&
         IS_GFX_PASSABLE(mapGfx[newY * mapWidth + newX])) {
+        int dx       = newX - worldPlayerX;
+        int dy       = newY - worldPlayerY;
         int oldCamX  = camX;
         int oldCamY  = camY;
         worldPlayerX = newX;
         worldPlayerY = newY;
         g_walkFrame ^= 1;
         worldUpdateCamera();
-        g_slideStartX = oldCamX - camX;
-        g_slideStartY = oldCamY - camY;
-        g_camSlideX   = g_slideStartX;
-        g_camSlideY   = g_slideStartY;
+        /* Camera slide: whatever the camera actually moved (0 when clamped). */
+        g_camSlideStartX = oldCamX - camX;
+        g_camSlideStartY = oldCamY - camY;
+        g_camSlideX      = g_camSlideStartX;
+        g_camSlideY      = g_camSlideStartY;
+        /* Player offset: always the full tile, independent of camera. */
+        g_plrOffStartX   = -dx * TILE_SIZE;
+        g_plrOffStartY   = -dy * TILE_SIZE;
+        g_plrOffX        = g_plrOffStartX;
+        g_plrOffY        = g_plrOffStartY;
         g_moveStart   = GetTickCount();
         g_midToggled  = 0;
         g_moving      = 1;
@@ -211,12 +229,21 @@ void returnToTown(void) {
 }
 
 void renderWorld(void) {
-    /* Apply slide offset: during animation rCam lags behind the logical camera,
-       making the viewport glide smoothly to the new position. */
+    /* Both tiles and player use the sliding camera so the whole viewport
+       glides smoothly — no tile snap. The player appears one tile ahead of
+       centre at t=0 and slides back to centre as rCam catches up, which
+       reads as forward motion against the scrolling background. */
     int rCamX = camX + g_camSlideX;
     int rCamY = camY + g_camSlideY;
 
-    /* Cull to only tiles that overlap the viewport */
+    /* Clamp rCam to valid map bounds so the slide never reveals off-map area. */
+    int maxCamX = mapWidth  * TILE_SIZE - gfxWidth;
+    int maxCamY = mapHeight * TILE_SIZE - gfxHeight;
+    if (maxCamX <= 0) { rCamX = maxCamX / 2; }
+    else { if (rCamX < 0) rCamX = 0; if (rCamX > maxCamX) rCamX = maxCamX; }
+    if (maxCamY <= 0) { rCamY = maxCamY / 2; }
+    else { if (rCamY < 0) rCamY = 0; if (rCamY > maxCamY) rCamY = maxCamY; }
+
     int tileX0 = rCamX / TILE_SIZE;
     int tileY0 = rCamY / TILE_SIZE;
     int tileX1 = (rCamX + gfxWidth  + TILE_SIZE - 1) / TILE_SIZE;
@@ -255,6 +282,7 @@ void renderWorld(void) {
         }
     }
     const uint8_t *playerSprite = g_walkFrame ? SPRITE_PLAYER_2 : SPRITE_PLAYER;
-    drawSprite8(worldPlayerX * TILE_SIZE - rCamX, worldPlayerY * TILE_SIZE - rCamY,
+    drawSprite8(worldPlayerX * TILE_SIZE - rCamX + g_plrOffX,
+                worldPlayerY * TILE_SIZE - rCamY + g_plrOffY,
                 playerSprite, TILE_PAL, scale);
 }

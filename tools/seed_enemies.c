@@ -36,7 +36,7 @@ static EnemyDef defs[] = {
     { "Skeleton",     20,  6,  2,  2,  2,  1,  1,  EDEF_HAS_WEAPON|EDEF_BLOCKABLE|EDEF_EXECUTABLE,  14,  3, 0xFF,{0} },
     { "Bandit",       18,  7,  2,  2,  3,  3,  3,  EDEF_HAS_WEAPON|EDEF_EXECUTABLE|EDEF_STUNNABLE,  16,  5, 0xFF,{0} },
     { "Giant Spider",  16,  5,  1,  2,  3,  1,  4,  EDEF_EXECUTABLE | EDEF_STUNNABLE,                10,  2, 0xFF,{0} },
-    { "Dark Mage",    14,  8,  1,  1,  2,  5,  2,  EDEF_EXECUTABLE,                                 18,  4, 0xFF,{0} },
+    { "Dark Mage",    25,  8,  1,  1,  2,  5,  2,  EDEF_EXECUTABLE,                                 18,  4, 0xFF,{0} },
 };
 
 /* Pool 1 (loc 0x01): outdoor / forest */

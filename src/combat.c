@@ -249,10 +249,11 @@ void handleCombatInput(int key) {
         return;
     }
     switch (key) {
+        case VK_LEFT:
         case VK_UP:
-            combat.selectedIndex--;
-            if (combat.selectedIndex < 0) combat.selectedIndex = combat.actionCount - 1;
+            combat.selectedIndex = (combat.selectedIndex + combat.actionCount - 1) % combat.actionCount;
             break;
+        case VK_RIGHT:
         case VK_DOWN:
             combat.selectedIndex = (combat.selectedIndex + 1) % combat.actionCount;
             break;
@@ -261,52 +262,162 @@ void handleCombatInput(int key) {
     }
 }
 
+/* 4px border, rounded corners via 2×2 big-pixel connector blocks.
+   Background is drawn as a cross-shape to leave the 4×4 corner areas empty.
+   Each corner: 2×2 transparent tip, two 2×2 border connectors on each arm,
+   and a 2×2 bg fill in the inner position to complete the curve. */
+static void drawCard(int cx, int cy, int cw, int ch,
+                     uint32_t bgCol, uint32_t bdCol) {
+    const int R  = 4; /* corner cutout size */
+    const int BT = 4; /* border thickness   */
+
+    /* Background — three rects skipping the R×R corner areas */
+    fillRect(cx + R,      cy,      cw - R*2, ch,      bgCol);
+    fillRect(cx,          cy + R,  R,        ch - R*2, bgCol);
+    fillRect(cx + cw - R, cy + R,  R,        ch - R*2, bgCol);
+
+    /* Border — BT-thick on all four sides */
+    fillRect(cx + R, cy,           cw - R*2, BT, bdCol); /* top    */
+    fillRect(cx + R, cy + ch - BT, cw - R*2, BT, bdCol); /* bottom */
+    fillRect(cx,           cy + R, BT, ch - R*2, bdCol); /* left   */
+    fillRect(cx + cw - BT, cy + R, BT, ch - R*2, bdCol); /* right  */
+
+    /* Corner connectors: two 2×2 border blocks per arm + inner bg fill */
+    /* Top-Left */
+    fillRect(cx + 2, cy,     2, 2, bdCol);
+    fillRect(cx,     cy + 2, 2, 2, bdCol);
+    fillRect(cx + 2, cy + 2, 2, 2, bgCol);
+    /* Top-Right */
+    fillRect(cx + cw - 4, cy,     2, 2, bdCol);
+    fillRect(cx + cw - 2, cy + 2, 2, 2, bdCol);
+    fillRect(cx + cw - 4, cy + 2, 2, 2, bgCol);
+    /* Bottom-Left */
+    fillRect(cx + 2, cy + ch - 2, 2, 2, bdCol);
+    fillRect(cx,     cy + ch - 4, 2, 2, bdCol);
+    fillRect(cx + 2, cy + ch - 4, 2, 2, bgCol);
+    /* Bottom-Right */
+    fillRect(cx + cw - 4, cy + ch - 2, 2, 2, bdCol);
+    fillRect(cx + cw - 2, cy + ch - 4, 2, 2, bdCol);
+    fillRect(cx + cw - 4, cy + ch - 4, 2, 2, bgCol);
+}
+
 void renderCombat(void) {
-    fillRect(40, 40, gfxWidth - 80, gfxHeight - 80, rgb(20, 10, 10));
+    /* ── Layout ─────────────────────────────────────────────────── */
+    const int CARD_W   = 140;
+    const int CARD_H   = 108;
+    const int CARD_GAP = 8;
+    const int CARD_Y   = gfxHeight - CARD_H - 16;
+    const int CARD_X0  = (gfxWidth - (4 * CARD_W + 3 * CARD_GAP)) / 2;
+
+    const int LP_X = 16,  LP_Y = 16;
+    const int LP_W = 220, LP_H = CARD_Y - LP_Y - 8;
+
+    const int IMG_SZ = 256;
+    const int MR_X   = LP_X + LP_W + 16;
+    const int MR_W   = gfxWidth - MR_X - 16;
+    const int IMG_X  = MR_X + (MR_W - IMG_SZ) / 2;
+    const int IMG_Y  = LP_Y  + (LP_H - IMG_SZ) / 2;
+
+    /* ── Background ─────────────────────────────────────────────── */
+    fillRect(0, 0, gfxWidth, gfxHeight, rgb(10, 8, 20));
+
+    /* ── Left panel ─────────────────────────────────────────────── */
+    fillRect(LP_X, LP_Y, LP_W, LP_H, rgb(14, 8, 8));
+    fillRect(LP_X,              LP_Y,              LP_W, 1,      rgb(90, 40, 40));
+    fillRect(LP_X,              LP_Y + LP_H - 1,   LP_W, 1,      rgb(90, 40, 40));
+    fillRect(LP_X,              LP_Y,              1,    LP_H,   rgb(90, 40, 40));
+    fillRect(LP_X + LP_W - 1,  LP_Y,              1,    LP_H,   rgb(90, 40, 40));
+
+    /* ── Monster image placeholder ──────────────────────────────── */
+    fillRect(IMG_X, IMG_Y, IMG_SZ, IMG_SZ, rgb(255, 255, 255));
 
     char buf[48];
-    int x = 60, y = 60;
-    const int lineH = 20;
+    const int bx   = LP_X + 10;
+    const int barW = LP_W - 20;
+    int y = LP_Y + 12;
 
+    /* ── Victory screen ─────────────────────────────────────────── */
     if (combat.phase == COMBAT_PHASE_VICTORY) {
-        drawText(x, y, "VICTORY!", rgb(255, 220, 50), 2); y += lineH + 4;
+        drawText(bx, y, "VICTORY!", rgb(255, 220, 50), 2);  y += 28;
         snprintf(buf, sizeof(buf), "+%d XP", combat.gainedXp);
-        drawText(x, y, buf, rgb(180, 255, 180), 2); y += lineH;
+        drawText(bx, y, buf, rgb(140, 255, 140), 2);        y += 22;
         if (combat.gainedGold > 0) {
-            if(combat.gainedGold ==1)
-                snprintf(buf, sizeof(buf), "+%d Solmark", combat.gainedGold);
-            else
-                snprintf(buf, sizeof(buf), "+%d Solmarks", combat.gainedGold);
-            drawText(x, y, buf, rgb(255, 215, 0), 2); y += lineH;
+            snprintf(buf, sizeof(buf), "+%d Solmark%s",
+                     combat.gainedGold, combat.gainedGold == 1 ? "" : "s");
+            drawText(bx, y, buf, rgb(255, 215, 0), 2);      y += 22;
         }
         for (int i = 0; i < combat.droppedCount; i++) {
             snprintf(buf, sizeof(buf), "Found: %s", itemName(combat.droppedItems[i]));
-            drawText(x, y, buf, rgb(180, 255, 220), 2); y += lineH;
+            drawText(bx, y, buf, rgb(140, 255, 200), 1);    y += 14;
         }
         if (combat.leveledUp) {
-            snprintf(buf, sizeof(buf), "LEVEL UP!  Lv.%d", player.level);
-            drawText(x, y, buf, rgb(255, 255, 100), 2); y += lineH;
-            drawText(x, y, "+5 HP  +1 ATK  +1 DEF", rgb(200, 200, 100), 2); y += lineH;
+            drawText(bx, y, "LEVEL UP!", rgb(255, 255, 80), 2);  y += 22;
+            snprintf(buf, sizeof(buf), "Now Lv.%d", player.level);
+            drawText(bx, y, buf, rgb(200, 200, 80), 2);
         }
-        y += 8;
-        drawText(x, y, "Enter / Esc to continue", rgb(120, 120, 120), 1);
+        drawText(bx, LP_Y + LP_H - 20, "Enter to continue", rgb(100, 90, 80), 1);
         return;
     }
 
-    snprintf(buf, sizeof(buf), "%s   HP: %d / %d",
-             combat.enemy.name, combat.enemy.hp, combat.enemy.maxHp);
-    drawText(x, y, buf, rgb(220, 80, 80), 2); y += lineH + 4;
+    /* ── Enemy section ──────────────────────────────────────────── */
+    drawText(bx, y, "ENEMY", rgb(100, 50, 50), 1);  y += 12;
+    drawText(bx, y, combat.enemy.name, rgb(220, 90, 90), 2);  y += 22;
 
-    snprintf(buf, sizeof(buf), "Your HP:  %d / %d", player.hp, player.maxHp);
-    drawText(x, y, buf, rgb(80, 220, 80), 2); y += lineH + 16;
+    int eHpFill = (combat.enemy.maxHp > 0)
+                ? combat.enemy.hp * barW / combat.enemy.maxHp : 0;
+    if (eHpFill < 0) eHpFill = 0;
+    fillRect(bx, y, barW, 10, rgb(40, 12, 12));
+    if (eHpFill > 0) fillRect(bx, y, eHpFill, 10, rgb(200, 50, 50));
+    y += 12;
+    snprintf(buf, sizeof(buf), "HP  %d / %d", combat.enemy.hp, combat.enemy.maxHp);
+    drawText(bx, y, buf, rgb(150, 70, 70), 1);  y += 18;
 
+    /* ── Divider ────────────────────────────────────────────────── */
+    fillRect(LP_X + 8, y + 4, LP_W - 16, 1, rgb(55, 35, 35));  y += 14;
+
+    /* ── Player section ─────────────────────────────────────────── */
+    drawText(bx, y, "PLAYER", rgb(50, 110, 50), 1);  y += 12;
+
+    int pMax    = player.maxHp > 0 ? player.maxHp : 1;
+    int pFill   = player.hp * barW / pMax;
+    int hpPct   = player.hp * 100 / pMax;
+    uint32_t hpCol = hpPct > 50 ? rgb(50, 200, 50)
+                   : hpPct > 25 ? rgb(200, 200, 50)
+                   :              rgb(200, 50, 50);
+    fillRect(bx, y, barW, 10, rgb(12, 30, 12));
+    if (pFill > 0) fillRect(bx, y, pFill, 10, hpCol);
+    y += 12;
+    snprintf(buf, sizeof(buf), "HP  %d / %d", player.hp, player.maxHp);
+    drawText(bx, y, buf, rgb(70, 150, 70), 1);  y += 18;
+
+    snprintf(buf, sizeof(buf), "ATK  %d", getAttack());
+    drawText(bx, y, buf, rgb(210, 90, 90), 1);
+    snprintf(buf, sizeof(buf), "DEF  %d", getDefense());
+    drawText(bx + 90, y, buf, rgb(90, 140, 210), 1);  y += 16;
+
+    snprintf(buf, sizeof(buf), "LVL  %d", player.level);
+    drawText(bx, y, buf, rgb(200, 180, 80), 1);
+
+    /* ── Action cards ───────────────────────────────────────────── */
     for (int i = 0; i < combat.actionCount; i++) {
+        int cx  = CARD_X0 + i * (CARD_W + CARD_GAP);
         int sel = (i == combat.selectedIndex);
-        uint32_t color = sel ? rgb(255, 255, 100) : rgb(180, 180, 180);
-        snprintf(buf, sizeof(buf), "%s%s",
-            sel ? "> " : "  ",
-            actionName(combat.actions[i].type));
-        drawText(x, y, buf, color, 2);
-        y += lineH;
+
+        uint32_t bgCol = sel ? rgb(30, 24, 54)  : rgb(14, 12, 28);
+        uint32_t bdCol = sel ? rgb(220, 200, 50) : rgb(55, 50, 85);
+
+        drawCard(cx, CARD_Y, CARD_W, CARD_H, bgCol, bdCol);
+
+        const char *name  = actionName(combat.actions[i].type);
+        int         nlen  = (int)strlen(name);
+        int         scale = (nlen * 16 <= CARD_W - 16) ? 2 : 1;
+        int         textW = nlen * 8 * scale;
+        int         tx    = cx + (CARD_W - textW) / 2;
+        int         ty    = CARD_Y + (CARD_H  - 8 * scale) / 2;
+        uint32_t    tCol  = sel ? rgb(255, 240, 80) : rgb(150, 145, 190);
+        drawText(tx, ty, name, tCol, scale);
+
+        if (sel)
+            fillRect(cx + CARD_W/2 - 2, CARD_Y + CARD_H - 8, 4, 4, rgb(220, 200, 50));
     }
 }
