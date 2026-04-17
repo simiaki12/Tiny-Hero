@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include "enemies.h"
+#include "pak.h"
 
 /* --- Enemy capability flags --- */
 #define ENEMY_HAS_WEAPON  (1<<0)  /* can be disarmed */
@@ -60,6 +61,8 @@ typedef struct {
     uint8_t  contextFlags;  /* ACT_CTX_* — all bits must hold */
     uint8_t  baseWeight;    /* base selection weight before modifiers */
     uint8_t  power;         /* base power value passed to performPlayerAction */
+    char     name[8];       /* display name shown on action card */
+    char     imgName[8];    /* base name of .bin sprite drawn above the name, e.g. "slash" */
 } ActionDef;
 
 typedef struct { ActionId type; uint8_t power; } Action;
@@ -78,6 +81,7 @@ typedef struct {
     int         leveledUp;
     uint8_t     droppedItems[4]; /* item IDs from loot rolls */
     int         droppedCount;
+    PakData     enemyImg;        /* loaded .bin sprite for the current enemy */
 } CombatState;
 
 extern CombatState combat;

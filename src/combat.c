@@ -19,34 +19,22 @@ CombatState combat;
  * add a case in computeWeight if it needs stat modifiers, and add a case in
  * performPlayerAction. Nothing else needs to change. */
 static const ActionDef actionDefs[ACTION_COUNT] = {
-    /*               id             reqSkill        reqLvl  ctxFlags             baseWt  power */
-    /* ACTION_ATTACK   */ { ACTION_ATTACK,   0xFF,           0,      0,                   70,     0  },
-    /* ACTION_STRONG   */ { ACTION_STRONG,   SKILL_BLADES,   2,      0,                   35,     4  },
-    /* ACTION_HEAL     */ { ACTION_HEAL,     SKILL_SURVIVAL, 1,      ACT_CTX_PLAYER_HURT, 55,     10 },
-    /* ACTION_DEFEND   */ { ACTION_DEFEND,   0xFF,           0,      0,                   28,     0  },
-    /* ACTION_DISARM   */ { ACTION_DISARM,   SKILL_BLADES,   3,      ACT_CTX_ENEMY_WEAPON,48,     0  },
-    /* ACTION_BACKSTAB */ { ACTION_BACKSTAB, SKILL_SNEAK,    2,      ACT_CTX_FIRST_TURN,  60,     6  },
-    /* ACTION_STUN     */ { ACTION_STUN,     SKILL_BLADES,   2,      ACT_CTX_CAN_STUN,    42,     0  },
-    /* ACTION_CALM     */ { ACTION_CALM,     SKILL_DIPLOMACY,2,      0,                   22,     0  },
-    /* ACTION_HIDE     */ { ACTION_HIDE,     SKILL_SNEAK,    3,      0,                   20,     0  },
-    /* ACTION_EXECUTE  */ { ACTION_EXECUTE,  SKILL_BLADES,   4,      ACT_CTX_EXECUTABLE,  78,     15 },
+    /*               id             reqSkill        reqLvl  ctxFlags             baseWt  power  name       img */
+    /* ACTION_ATTACK   */ { ACTION_ATTACK,   0xFF,           0,      0,                   70,     0,  "Slash",   "" },
+    /* ACTION_STRONG   */ { ACTION_STRONG,   SKILL_BLADES,   2,      0,                   35,     4,  "Strong",  "" },
+    /* ACTION_HEAL     */ { ACTION_HEAL,     SKILL_SURVIVAL, 1,      ACT_CTX_PLAYER_HURT, 55,     10, "Regen",   "" },
+    /* ACTION_DEFEND   */ { ACTION_DEFEND,   0xFF,           0,      0,                   28,     0,  "Parry",   "" },
+    /* ACTION_DISARM   */ { ACTION_DISARM,   SKILL_BLADES,   3,      ACT_CTX_ENEMY_WEAPON,48,     0,  "Disarm",  "" },
+    /* ACTION_BACKSTAB */ { ACTION_BACKSTAB, SKILL_SNEAK,    2,      ACT_CTX_FIRST_TURN,  60,     6,  "Mstep",   "" },
+    /* ACTION_STUN     */ { ACTION_STUN,     SKILL_BLADES,   2,      ACT_CTX_CAN_STUN,    42,     0,  "Stun",    "" },
+    /* ACTION_CALM     */ { ACTION_CALM,     SKILL_DIPLOMACY,2,      0,                   22,     0,  "Persuade","" },
+    /* ACTION_HIDE     */ { ACTION_HIDE,     SKILL_SNEAK,    3,      0,                   20,     0,  "Blind",   "" },
+    /* ACTION_EXECUTE  */ { ACTION_EXECUTE,  SKILL_BLADES,   4,      ACT_CTX_EXECUTABLE,  78,     15, "Execute", "" },
 };
 
-static const char *actionName(ActionId id) {
-    switch (id) {
-        case ACTION_ATTACK:   return "Slash";
-        case ACTION_STRONG:   return "Strong Attack";
-        case ACTION_HEAL:     return "Regenerate";
-        case ACTION_DEFEND:   return "Parry";
-        case ACTION_DISARM:   return "Disarm";
-        case ACTION_BACKSTAB: return "Moonstep";
-        case ACTION_STUN:     return "Stun";
-        case ACTION_CALM:     return "Persuade";
-        case ACTION_HIDE:     return "Blind spot";
-        case ACTION_EXECUTE:  return "Death star";
-        default:              return "???";
-    }
-}
+
+/* Lazily-loaded sprites for action cards — loaded on first render, never freed */
+static PakData actionImgs[ACTION_COUNT];
 
 /* Returns 1 if all context conditions for def are met right now. */
 static int checkContext(const ActionDef *def) {
@@ -130,6 +118,16 @@ static void generateActions(void) {
 }
 
 void startCombat(const EnemyDef *def) {
+    /* Free previous enemy image if any */
+    if (combat.enemyImg.data) { free(combat.enemyImg.data); combat.enemyImg.data = NULL; }
+
+    /* Load sprite */
+    if (def->imgName[0]) {
+        char path[32];
+        snprintf(path, sizeof(path), "assets/%s.bin", def->imgName);
+        combat.enemyImg = pakRead(path);
+    }
+
     int idx = (int)(def - enemyDefs);
     combat.enemyDefId = (idx >= 0 && idx < enemyDefCount) ? (uint8_t)idx : 0xFF;
     memcpy(combat.enemy.name, def->name, 16);
@@ -328,8 +326,16 @@ void renderCombat(void) {
     fillRect(LP_X,              LP_Y,              1,    LP_H,   rgb(90, 40, 40));
     fillRect(LP_X + LP_W - 1,  LP_Y,              1,    LP_H,   rgb(90, 40, 40));
 
-    /* ── Monster image placeholder ──────────────────────────────── */
-    fillRect(IMG_X, IMG_Y, IMG_SZ, IMG_SZ, rgb(255, 255, 255));
+    /* ── Monster image ──────────────────────────────────────────── */
+    if (combat.enemyImg.data) {
+        int iw    = combat.enemyImg.data[0];
+        int ih    = combat.enemyImg.data[1];
+        int scale = IMG_SZ / (iw > ih ? iw : ih);
+        if (scale < 1) scale = 1;
+        int dx    = IMG_X + (IMG_SZ - iw * scale) / 2;
+        int dy    = IMG_Y + (IMG_SZ - ih * scale) / 2;
+        drawBin(dx, dy, combat.enemyImg.data, scale);
+    }
 
     char buf[48];
     const int bx   = LP_X + 10;
@@ -408,12 +414,36 @@ void renderCombat(void) {
 
         drawCard(cx, CARD_Y, CARD_W, CARD_H, bgCol, bdCol);
 
-        const char *name  = actionName(combat.actions[i].type);
+        ActionId     aid  = combat.actions[i].type;
+        const ActionDef *adef = &actionDefs[aid];
+
+        /* Lazy-load action sprite */
+        if (!actionImgs[aid].data && adef->imgName[0]) {
+            char path[32];
+            snprintf(path, sizeof(path), "assets/%s.bin", adef->imgName);
+            actionImgs[aid] = pakRead(path);
+        }
+
+        /* Reserve top portion of card for image, bottom for text */
+        const int IMG_AREA = 68;
+        const int TXT_AREA = CARD_H - IMG_AREA;
+
+        if (actionImgs[aid].data) {
+            int iw    = actionImgs[aid].data[0];
+            int ih    = actionImgs[aid].data[1];
+            int iscale = IMG_AREA / (iw > ih ? iw : ih);
+            if (iscale < 1) iscale = 1;
+            int ix = cx + (CARD_W - iw * iscale) / 2;
+            int iy = CARD_Y + (IMG_AREA - ih * iscale) / 2;
+            drawBin(ix, iy, actionImgs[aid].data, iscale);
+        }
+
+        const char *name  = adef->name;
         int         nlen  = (int)strlen(name);
         int         scale = (nlen * 16 <= CARD_W - 16) ? 2 : 1;
         int         textW = nlen * 8 * scale;
         int         tx    = cx + (CARD_W - textW) / 2;
-        int         ty    = CARD_Y + (CARD_H  - 8 * scale) / 2;
+        int         ty    = CARD_Y + IMG_AREA + (TXT_AREA - 8 * scale) / 2;
         uint32_t    tCol  = sel ? rgb(255, 240, 80) : rgb(150, 145, 190);
         drawText(tx, ty, name, tCol, scale);
 

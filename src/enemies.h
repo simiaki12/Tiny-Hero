@@ -26,7 +26,8 @@ typedef struct {
     uint8_t xpReward;
     uint8_t goldDrop;        /* max gold dropped; actual = rand(1..goldDrop) */
     uint8_t lootTableId;     /* index into lootTables[]; 0xFF = no loot table */
-    uint8_t _pad[5];
+    char    imgName[3];      /* 2-char base name of .bin sprite, e.g. "go" → assets/go.bin */
+    uint8_t _pad[2];
 } EnemyDef;                  /* 32 bytes */
 
 /* 8 bytes — maps a pool ID (loc tile value 0x01-0x0F) to a set of enemy types */
