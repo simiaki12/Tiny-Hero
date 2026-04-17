@@ -20,16 +20,16 @@ CombatState combat;
  * performPlayerAction. Nothing else needs to change. */
 static const ActionDef actionDefs[ACTION_COUNT] = {
     /*               id             reqSkill        reqLvl  ctxFlags             baseWt  power  name       img */
-    /* ACTION_ATTACK   */ { ACTION_ATTACK,   0xFF,           0,      0,                   70,     0,  "Slash",   "" },
-    /* ACTION_STRONG   */ { ACTION_STRONG,   SKILL_BLADES,   2,      0,                   35,     4,  "Strong",  "" },
-    /* ACTION_HEAL     */ { ACTION_HEAL,     SKILL_SURVIVAL, 1,      ACT_CTX_PLAYER_HURT, 55,     10, "Regen",   "" },
-    /* ACTION_DEFEND   */ { ACTION_DEFEND,   0xFF,           0,      0,                   28,     0,  "Parry",   "" },
-    /* ACTION_DISARM   */ { ACTION_DISARM,   SKILL_BLADES,   3,      ACT_CTX_ENEMY_WEAPON,48,     0,  "Disarm",  "" },
-    /* ACTION_BACKSTAB */ { ACTION_BACKSTAB, SKILL_SNEAK,    2,      ACT_CTX_FIRST_TURN,  60,     6,  "Mstep",   "" },
-    /* ACTION_STUN     */ { ACTION_STUN,     SKILL_BLADES,   2,      ACT_CTX_CAN_STUN,    42,     0,  "Stun",    "" },
-    /* ACTION_CALM     */ { ACTION_CALM,     SKILL_DIPLOMACY,2,      0,                   22,     0,  "Persuade","" },
-    /* ACTION_HIDE     */ { ACTION_HIDE,     SKILL_SNEAK,    3,      0,                   20,     0,  "Blind",   "" },
-    /* ACTION_EXECUTE  */ { ACTION_EXECUTE,  SKILL_BLADES,   4,      ACT_CTX_EXECUTABLE,  78,     15, "Execute", "" },
+    /* ACTION_ATTACK   */ { ACTION_ATTACK,   0xFF,           0,      0,                   70,     0,  "Slash",      "a1" },
+    /* ACTION_STRONG   */ { ACTION_STRONG,   SKILL_BLADES,   2,      0,                   35,     4,  "Strong Attack",     "a2" },
+    /* ACTION_HEAL     */ { ACTION_HEAL,     SKILL_SURVIVAL, 1,      ACT_CTX_PLAYER_HURT, 55,     10, "Regenerate",      "a3" },
+    /* ACTION_DEFEND   */ { ACTION_DEFEND,   0xFF,           0,      0,                   28,     0,  "Parry",      "a4" },
+    /* ACTION_DISARM   */ { ACTION_DISARM,   SKILL_BLADES,   3,      ACT_CTX_ENEMY_WEAPON,48,     0,  "Disarm",     "a5" },
+    /* ACTION_BACKSTAB */ { ACTION_BACKSTAB, SKILL_SNEAK,    2,      ACT_CTX_FIRST_TURN,  60,     6,  "Moonstep",   "a6" },
+    /* ACTION_STUN     */ { ACTION_STUN,     SKILL_BLADES,   2,      ACT_CTX_CAN_STUN,    42,     0,  "Stun",       "a7" },
+    /* ACTION_CALM     */ { ACTION_CALM,     SKILL_DIPLOMACY,2,      0,                   22,     0,  "Persuade",   "a8" },
+    /* ACTION_HIDE     */ { ACTION_HIDE,     SKILL_SNEAK,    3,      0,                   20,     0,  "Blindspot",  "a9" },
+    /* ACTION_EXECUTE  */ { ACTION_EXECUTE,  SKILL_BLADES,   4,      ACT_CTX_EXECUTABLE,  78,     15, "Death star",  "a10" },
 };
 
 

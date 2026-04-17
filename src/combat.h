@@ -61,7 +61,7 @@ typedef struct {
     uint8_t  contextFlags;  /* ACT_CTX_* — all bits must hold */
     uint8_t  baseWeight;    /* base selection weight before modifiers */
     uint8_t  power;         /* base power value passed to performPlayerAction */
-    char     name[8];       /* display name shown on action card */
+    char     name[16];      /* display name shown on action card */
     char     imgName[8];    /* base name of .bin sprite drawn above the name, e.g. "slash" */
 } ActionDef;
 

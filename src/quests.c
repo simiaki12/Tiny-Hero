@@ -337,15 +337,18 @@ void renderQuestNotifications(void) {
         }
     }
 
-    /* Draw from bottom of stack upward, bottom-left corner */
+    /* Draw from top of stack downward, top-right corner */
     const int lineH  = 14;
     const int padX   = 8;
-    const int startY = gfxHeight - 12;
+    const int startY = 8;
 
-    for (int n = g_notifCount - 1; n >= 0; n--) {
-        int y = startY - (g_notifCount - 1 - n) * (lineH * 2 + 4);
-        if (g_notifs[n].line2[0])
-            drawText(padX, y - lineH, g_notifs[n].line2, rgb(255, 220, 80), 1);
-        drawText(padX, y - lineH * 2, g_notifs[n].line1, rgb(180, 230, 180), 1);
+    for (int n = 0; n < g_notifCount; n++) {
+        int y = startY + n * (lineH * 2 + 4);
+        int x1 = gfxWidth - (int)strlen(g_notifs[n].line1) * 8 - padX;
+        drawText(x1, y, g_notifs[n].line1, rgb(180, 230, 180), 1);
+        if (g_notifs[n].line2[0]) {
+            int x2 = gfxWidth - (int)strlen(g_notifs[n].line2) * 8 - padX;
+            drawText(x2, y + lineH, g_notifs[n].line2, rgb(255, 220, 80), 1);
+        }
     }
 }
