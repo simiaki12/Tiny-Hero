@@ -106,6 +106,83 @@ void drawSprite8(int dx, int dy, const uint8_t* data, const uint32_t* pal, int s
     }
 }
 
+/* Built-in palettes matching tools/img_conv.c */
+static const uint8_t g_builtin_pal[][16][3] = {
+    /* 1 — Gameboy DMG */
+    { {15,56,15},{48,98,48},{139,172,15},{155,188,15} },
+    /* 2 — 4-shade grayscale */
+    { {0,0,0},{85,85,85},{170,170,170},{255,255,255} },
+    /* 3 — CGA */
+    { {0,0,0},{0,0,170},{0,170,0},{0,170,170},
+      {170,0,0},{170,0,170},{170,170,0},{170,170,170},
+      {85,85,85},{85,85,255},{85,255,85},{85,255,255},
+      {255,85,85},{255,85,255},{255,255,85},{255,255,255} },
+};
+static const int g_builtin_pal_size[] = { 4, 4, 16 };
+#define N_BUILTIN_PAL 3
+
+static int bin_bits_needed(int n) {
+    int b = 1;
+    while ((1 << b) < n) b++;
+    return b;
+}
+
+void drawBin(int x, int y, const uint8_t *data, int scale) {
+    if (!data) return;
+    int w            = data[0];
+    int h            = data[1];
+    int8_t cc        = (int8_t)data[2];
+    int n_colors;
+    uint32_t pal[127];
+
+    const uint8_t *src = data + 3;
+
+    if (cc < 0) {
+        /* Built-in palette */
+        int id = (int)(-cc) - 1;
+        if (id < 0 || id >= N_BUILTIN_PAL) return;
+        n_colors = g_builtin_pal_size[id];
+        for (int ci = 0; ci < n_colors; ci++)
+            pal[ci] = rgb(g_builtin_pal[id][ci][0],
+                          g_builtin_pal[id][ci][1],
+                          g_builtin_pal[id][ci][2]);
+    } else {
+        /* Inline palette */
+        n_colors = (int)cc;
+        for (int ci = 0; ci < n_colors; ci++, src += 3)
+            pal[ci] = rgb(src[0], src[1], src[2]);
+    }
+
+    int bpp  = bin_bits_needed(n_colors + 1);
+    int mask = (1 << bpp) - 1;
+
+    int bit_pos = 0;
+    for (int row = 0; row < h; row++) {
+        for (int col = 0; col < w; col++) {
+            /* Unpack next index MSB-first */
+            int val = 0;
+            for (int b = bpp - 1; b >= 0; b--) {
+                if ((src[bit_pos / 8] >> (7 - (bit_pos % 8))) & 1)
+                    val |= (1 << b);
+                bit_pos++;
+            }
+            val &= mask;
+            if (val == n_colors) continue; /* transparent */
+
+            int px = x + col * scale;
+            int py = y + row * scale;
+            int x1 = px < 0 ? 0 : px;
+            int y1 = py < 0 ? 0 : py;
+            int x2 = px + scale > gfxWidth  ? gfxWidth  : px + scale;
+            int y2 = py + scale > gfxHeight ? gfxHeight : py + scale;
+            uint32_t color = pal[val];
+            for (int sy = y1; sy < y2; sy++)
+                for (int sx = x1; sx < x2; sx++)
+                    g_pixels[sy * gfxWidth + sx] = color;
+        }
+    }
+}
+
 void drawBW(const uint8_t *data, uint32_t size, uint32_t color) {
     if (!data || size < 4) return;
     int imgW = (int)(data[0] | (data[1] << 8));

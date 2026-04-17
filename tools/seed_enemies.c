@@ -20,7 +20,8 @@ typedef struct {
     uint8_t xpReward;
     uint8_t goldDrop;
     uint8_t lootTableId; /* 0xFF = none */
-    uint8_t _pad[5];
+    char    imgName[3];  /* 2-char sprite base name, e.g. "go" → assets/go.bin */
+    uint8_t _pad[2];
 } EnemyDef;
 
 typedef struct {
@@ -30,13 +31,13 @@ typedef struct {
 } EnemyPool;
 
 static EnemyDef defs[] = {
-    /* name           hp  atk def siz spd int per  flags                                              xp gold loot */
-    { "Goblin",       12,  4,  1,  1,  3,  1,  2,  EDEF_EXECUTABLE | EDEF_STUNNABLE,                 8,  1,  0,  {0} },
-    { "Wolf",         10,  5,  0,  2,  4,  1,  3,  EDEF_STUNNABLE,                                   7,  1, 0xFF,{0} },
-    { "Skeleton",     20,  6,  2,  2,  2,  1,  1,  EDEF_HAS_WEAPON|EDEF_BLOCKABLE|EDEF_EXECUTABLE,  14,  3, 0xFF,{0} },
-    { "Bandit",       18,  7,  2,  2,  3,  3,  3,  EDEF_HAS_WEAPON|EDEF_EXECUTABLE|EDEF_STUNNABLE,  16,  5, 0xFF,{0} },
-    { "Giant Spider",  16,  5,  1,  2,  3,  1,  4,  EDEF_EXECUTABLE | EDEF_STUNNABLE,                10,  2, 0xFF,{0} },
-    { "Dark Mage",    25,  8,  1,  1,  2,  5,  2,  EDEF_EXECUTABLE,                                 18,  4, 0xFF,{0} },
+    /* name           hp  atk def siz spd int per  flags                                              xp gold loot  img  pad */
+    { "Goblin",       12,  4,  1,  1,  3,  1,  2,  EDEF_EXECUTABLE | EDEF_STUNNABLE,                 8,  1,  0,  "go",{0} },
+    { "Wolf",         10,  5,  0,  2,  4,  1,  3,  EDEF_STUNNABLE,                                   7,  1, 0xFF,"wo",{0} },
+    { "Skeleton",     20,  6,  2,  2,  2,  1,  1,  EDEF_HAS_WEAPON|EDEF_BLOCKABLE|EDEF_EXECUTABLE,  14,  3, 0xFF,"sk",{0} },
+    { "Bandit",       18,  7,  2,  2,  3,  3,  3,  EDEF_HAS_WEAPON|EDEF_EXECUTABLE|EDEF_STUNNABLE,  16,  5, 0xFF,"ba",{0} },
+    { "Giant Spider",  16,  5,  1,  2,  3,  1,  4,  EDEF_EXECUTABLE | EDEF_STUNNABLE,                10,  2, 0xFF,"sp",{0} },
+    { "Dark Mage",    25,  8,  1,  1,  2,  5,  2,  EDEF_EXECUTABLE,                                 18,  4, 0xFF,"dm",{0} },
 };
 
 /* Pool 1 (loc 0x01): outdoor / forest */
