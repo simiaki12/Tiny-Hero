@@ -9,6 +9,7 @@
 #include "town.h"
 #include "player.h"
 #include "quests.h"
+#include "npcs.h"
 #include "tiles8x8.h"
 
 int     worldPlayerX  = 2;
@@ -157,6 +158,7 @@ void updateWorld(void) {
 
 void handleWorldInput(int key) {
     if (key == 'I') { state = STATE_INVENTORY; return; }
+    if (key == 'E') { npcTryInteract(); return; }
     if (g_moving) return;
 
     int newX = worldPlayerX, newY = worldPlayerY;
@@ -281,6 +283,7 @@ void renderWorld(void) {
             drawSprite8(x * TILE_SIZE - rCamX, y * TILE_SIZE - rCamY, tile, TILE_PAL, scale);
         }
     }
+    renderNpcs(rCamX, rCamY);
     const uint8_t *playerSprite = g_walkFrame ? SPRITE_PLAYER_2 : SPRITE_PLAYER;
     drawSprite8(worldPlayerX * TILE_SIZE - rCamX + g_plrOffX,
                 worldPlayerY * TILE_SIZE - rCamY + g_plrOffY,

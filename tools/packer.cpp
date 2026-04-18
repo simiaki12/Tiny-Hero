@@ -46,6 +46,7 @@ int main() {
     specs.push_back({ "assets/dialog.dat",       false });
     specs.push_back({ "assets/quests.dat",       false });
     specs.push_back({ "assets/loottables.dat",   false });
+    specs.push_back({ "assets/npcs.dat",         false });
 
     /* Resolve which files are present */
     std::vector<std::string> files;

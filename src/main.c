@@ -21,6 +21,7 @@
 #include "loot.h"
 #include "audio.h"
 #include "options.h"
+#include "npcs.h"
 
 /* State machine */
 GameState state     = STATE_MAIN_MENU;
@@ -265,6 +266,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
     PakData dialogData    = pakRead("assets/dialog.dat");
     PakData questData     = pakRead("assets/quests.dat");
     PakData lootData      = pakRead("assets/loottables.dat");
+    PakData npcData       = pakRead("assets/npcs.dat");
 
     if (!loadPlayer(playerData)) { pakClose(); return 1; }
     loadItems(itemData);        /* optional — falls back to builtins if not in pak */
@@ -272,12 +274,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
     loadDialogs(dialogData);    /* optional — falls back to builtins if not in pak */
     loadQuests(questData);      /* optional — no quests if absent */
     loadLootTables(lootData);   /* optional — no item drops if absent */
+    loadNpcs(npcData);          /* optional — no NPCs if absent */
     free(playerData.data);
     free(itemData.data);
     free(enemyData.data);
     free(dialogData.data);
     free(questData.data);
     free(lootData.data);
+    free(npcData.data);
 
     const int screenW = 640;
     const int screenH = 480;

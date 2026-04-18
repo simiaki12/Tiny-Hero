@@ -15,6 +15,7 @@ PLR_EDITOR  = build/player_editor
 DLG_EDITOR  = build/dialog_editor
 QST_EDITOR  = build/quest_editor
 ENM_EDITOR  = build/enemy_editor
+NPC_EDITOR  = build/npc_editor
 IMG_CONV    = build/img_conv
 BW_CONV     = build/bw_conv
 RLE         = build/rle
@@ -113,7 +114,16 @@ enemy_editor:
 	mkdir -p build
 	$(CC_HOST) -std=c11 -Os -Wno-unused-result tools/enemy_editor.c -o $(ENM_EDITOR) -lncurses
 
-tools: map_editor player_editor dialog_editor quest_editor item_editor loottable_editor enemy_editor img_conv bw_conv rle
+npc_editor:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os -Wno-unused-result tools/npc_editor.c -o $(NPC_EDITOR) -lncurses
+
+seed_npcs:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/seed_npcs.c -o build/seed_npcs
+	./build/seed_npcs
+
+tools: map_editor player_editor dialog_editor quest_editor item_editor loottable_editor enemy_editor npc_editor img_conv bw_conv rle
 
 clean:
 	rm -rf build data.pak
