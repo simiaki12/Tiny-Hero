@@ -121,8 +121,9 @@ static void renderBrowser(void) {
         uint32_t color = sel ? rgb(255, 255, 100) : rgb(180, 180, 180);
         char buf[72];
         snprintf(buf, sizeof(buf), "%s%s", sel ? "> " : "  ", g_saveNames[i]);
-        int textW = (int)(strlen(buf) * 8 * 2);
-        drawText(cx - textW / 2, startY + i * lineH, buf, color, 2);
+        int labelW  = (int)(strlen(g_saveNames[i]) * 8 * 2);
+        int prefixW = 2 * 8 * 2;
+        drawText(cx - labelW / 2 - prefixW, startY + i * lineH, buf, color, 2);
     }
 
     drawText(cx - 96, startY + g_saveCount * lineH + 12,
@@ -165,7 +166,8 @@ void renderMainMenu(void) {
     const int startY = gfxHeight / 2 - (MENU_ITEMS * lineH) / 2;
 
     fillRect(0, 0, gfxWidth, gfxHeight, rgb(0, 0, 0));
-    drawText(cx - 72, startY - 48, "TINY HERO", rgb(220, 220, 255), 2);
+    drawBWAt(cx - 120, startY - 48, 240, 48, pakRead("assets/logo.bin").data, pakRead("assets/logo.bin").size, rgb(255, 0, 0), rgb(0,0,0));
+//    drawText(cx - 72, startY - 48, "TINY HERO", rgb(220, 220, 255), 2);
 
     int hasSave = anySaveExists();
     for (int i = 0; i < MENU_ITEMS; i++) {
@@ -175,7 +177,8 @@ void renderMainMenu(void) {
                          sel      ? rgb(255, 255, 100) : rgb(180, 180, 180);
         char buf[32];
         snprintf(buf, sizeof(buf), "%s%s", sel ? "> " : "  ", g_labels[i]);
-        int textW = (int)(strlen(buf) * 8 * 2);
-        drawText(cx - textW / 2, startY + i * lineH, buf, color, 2);
+        int labelW  = (int)(strlen(g_labels[i]) * 8 * 2);
+        int prefixW = 2 * 8 * 2;
+        drawText(cx - labelW / 2 - prefixW, startY + i * lineH, buf, color, 2);
     }
 }

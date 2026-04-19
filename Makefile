@@ -19,12 +19,17 @@ NPC_EDITOR  = build/npc_editor
 IMG_CONV    = build/img_conv
 BW_CONV     = build/bw_conv
 RLE         = build/rle
+RES         = build/resources.o
 
-debug: pack
-	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(SRC) -o $(OUT) $(LDFLAGS)
+$(RES): resources.rc icon.ico
+	mkdir -p build
+	x86_64-w64-mingw32-windres resources.rc -o $(RES)
 
-release: pack
-	$(CC) $(CFLAGS) $(RELEASEFLAGS) $(SRC) -o $(OUT) $(LDFLAGS_STATIC) -s
+debug: pack $(RES)
+	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(SRC) $(RES) -o $(OUT) $(LDFLAGS)
+
+release: pack $(RES)
+	$(CC) $(CFLAGS) $(RELEASEFLAGS) $(SRC) $(RES) -o $(OUT) $(LDFLAGS_STATIC) -s
 	ls -lh $(OUT)
 
 gen_world_music:

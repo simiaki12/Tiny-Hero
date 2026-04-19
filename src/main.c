@@ -289,7 +289,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
     WNDCLASSA wc = {0};
     wc.lpfnWndProc   = WndProc;
     wc.hInstance     = hInstance;
-    wc.lpszClassName = "TinyHero";
+    wc.lpszClassName = "EternalNight";
     wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
     RegisterClassA(&wc);
 
@@ -297,7 +297,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
     g_hwnd = CreateWindowA(
-        "TinyHero", "Tiny Hero",
+        "EternalNight", "Eternal Night",
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT,
         wr.right - wr.left, wr.bottom - wr.top,

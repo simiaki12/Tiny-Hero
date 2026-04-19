@@ -8,10 +8,14 @@ int gfxHeight = 0;
 static HDC       g_backDC;
 static HBITMAP   g_backBmp;
 static uint32_t* g_pixels;
+static int       g_winW = 0;
+static int       g_winH = 0;
 
 void gfxInit(HWND hwnd, int w, int h) {
     gfxWidth  = w;
     gfxHeight = h;
+    g_winW    = w;
+    g_winH    = h;
 
     HDC hdc  = GetDC(hwnd);
     g_backDC = CreateCompatibleDC(hdc);
@@ -31,28 +35,40 @@ void gfxInit(HWND hwnd, int w, int h) {
 
 void gfxPresent(HWND hwnd) {
     HDC hdc = GetDC(hwnd);
-    BitBlt(hdc, 0, 0, gfxWidth, gfxHeight, g_backDC, 0, 0, SRCCOPY);
+
+    /* Letterbox: scale logical buffer into window preserving aspect ratio */
+    int dstW, dstH;
+    if (g_winW * gfxHeight > g_winH * gfxWidth) {
+        dstH = g_winH;
+        dstW = gfxWidth * g_winH / gfxHeight;
+    } else {
+        dstW = g_winW;
+        dstH = gfxHeight * g_winW / gfxWidth;
+    }
+    int offX = (g_winW - dstW) / 2;
+    int offY = (g_winH - dstH) / 2;
+
+    /* Fill black bars */
+    HBRUSH black = GetStockObject(BLACK_BRUSH);
+    if (offX > 0) {
+        RECT r = {0, 0, offX, g_winH};             FillRect(hdc, &r, black);
+        r = (RECT){offX + dstW, 0, g_winW, g_winH}; FillRect(hdc, &r, black);
+    }
+    if (offY > 0) {
+        RECT r = {0, 0, g_winW, offY};              FillRect(hdc, &r, black);
+        r = (RECT){0, offY + dstH, g_winW, g_winH}; FillRect(hdc, &r, black);
+    }
+
+    SetStretchBltMode(hdc, HALFTONE);
+    StretchBlt(hdc, offX, offY, dstW, dstH, g_backDC, 0, 0, gfxWidth, gfxHeight, SRCCOPY);
     ReleaseDC(hwnd, hdc);
 }
 
 void gfxResize(int w, int h) {
-    if (w <= 0 || h <= 0 || !g_backDC) return;
-    SelectObject(g_backDC, (HGDIOBJ)GetStockObject(NULL_BRUSH));
-    DeleteObject(g_backBmp);
-
-    gfxWidth  = w;
-    gfxHeight = h;
-
-    BITMAPINFO bmi = {0};
-    bmi.bmiHeader.biSize        = sizeof(BITMAPINFOHEADER);
-    bmi.bmiHeader.biWidth       = w;
-    bmi.bmiHeader.biHeight      = -h;
-    bmi.bmiHeader.biPlanes      = 1;
-    bmi.bmiHeader.biBitCount    = 32;
-    bmi.bmiHeader.biCompression = BI_RGB;
-
-    g_backBmp = CreateDIBSection(g_backDC, &bmi, DIB_RGB_COLORS, (void**)&g_pixels, NULL, 0);
-    SelectObject(g_backDC, g_backBmp);
+    if (w <= 0 || h <= 0) return;
+    g_winW = w;
+    g_winH = h;
+    /* Backbuffer stays at fixed logical size — no recreate needed */
 }
 
 void gfxShutdown(void) {
@@ -183,17 +199,17 @@ void drawBin(int x, int y, const uint8_t *data, int scale) {
     }
 }
 
-void drawBW(const uint8_t *data, uint32_t size, uint32_t color) {
+void drawBWAt(int x, int y, int dstW, int dstH,
+              const uint8_t *data, uint32_t size, uint32_t color, uint32_t color2) {
     if (!data || size < 4) return;
     int imgW = (int)(data[0] | (data[1] << 8));
     int imgH = (int)(data[2] | (data[3] << 8));
-    if (imgW <= 0 || imgH <= 0) return;
+    if (imgW <= 0 || imgH <= 0 || dstW <= 0 || dstH <= 0) return;
 
     int total = imgW * imgH;
     uint8_t *bits = malloc(total);
     if (!bits) return;
 
-    /* decode RLE into flat bitmap */
     int pixel = 0;
     uint8_t bit = 0;
     uint32_t pos = 4;
@@ -204,27 +220,40 @@ void drawBW(const uint8_t *data, uint32_t size, uint32_t color) {
         bit ^= 1;
     }
 
-    /* letterbox: largest fit preserving aspect ratio */
-    int drawW, drawH;
-    if (gfxWidth * imgH > gfxHeight * imgW) {
-        drawH = gfxHeight;
-        drawW = imgW * gfxHeight / imgH;
-    } else {
-        drawW = gfxWidth;
-        drawH = imgH * gfxWidth / imgW;
-    }
-    int offX = (gfxWidth  - drawW) / 2;
-    int offY = (gfxHeight - drawH) / 2;
-
-    for (int py = 0; py < drawH; py++) {
-        int sy = py * imgH / drawH;
-        for (int px = 0; px < drawW; px++) {
-            int sx = px * imgW / drawW;
-            g_pixels[(offY + py) * gfxWidth + (offX + px)] = bits[sy * imgW + sx] ? color : 0xFFFFFF;
+    for (int py = 0; py < dstH; py++) {
+        int gy = y + py;
+        if (gy < 0 || gy >= gfxHeight) continue;
+        int sy = py * imgH / dstH;
+        for (int px = 0; px < dstW; px++) {
+            int gx = x + px;
+            if (gx < 0 || gx >= gfxWidth) continue;
+            int sx = px * imgW / dstW;
+            g_pixels[gy * gfxWidth + gx] = bits[sy * imgW + sx] ? color : color2;
         }
     }
 
     free(bits);
+}
+
+void drawBW(const uint8_t *data, uint32_t size, uint32_t color) {
+    if (!data || size < 4) return;
+    int imgW = (int)(data[0] | (data[1] << 8));
+    int imgH = (int)(data[2] | (data[3] << 8));
+    if (imgW <= 0 || imgH <= 0) return;
+
+    /* Letterbox: largest fit preserving aspect ratio */
+    int dstW, dstH;
+    if (gfxWidth * imgH > gfxHeight * imgW) {
+        dstH = gfxHeight;
+        dstW = imgW * gfxHeight / imgH;
+    } else {
+        dstW = gfxWidth;
+        dstH = imgH * gfxWidth / imgW;
+    }
+    int offX = (gfxWidth  - dstW) / 2;
+    int offY = (gfxHeight - dstH) / 2;
+
+    drawBWAt(offX, offY, dstW, dstH, data, size, color,0xFFFFFF);
 }
 
 void drawText(int x, int y, const char* text, uint32_t color, int scale) {

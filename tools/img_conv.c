@@ -135,10 +135,10 @@ static void quantize(unsigned char *img, int total, int k,
     int n_restarts = (n_fixed < k) ? KMEANS_RESTARTS : 1;
 
     uint8_t best_r[255], best_g[255], best_b[255];
-    int     best_assign[1024]; /* max 32x32 = 1024 opaque pixels */
     long    best_distortion = LONG_MAX;
 
-    int *assign = malloc((size_t)n * sizeof(int));
+    int *assign      = malloc((size_t)n * sizeof(int));
+    int *best_assign = malloc((size_t)n * sizeof(int));
 
     for (int restart = 0; restart < n_restarts; restart++) {
         float cr[255], cg[255], cb[255];
@@ -238,6 +238,7 @@ static void quantize(unsigned char *img, int total, int k,
         img[i*4+2] = best_b[c];
     }
 
+    free(best_assign);
     free(pr); free(pg); free(pb); free(src_idx);
 }
 
