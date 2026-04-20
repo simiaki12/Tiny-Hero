@@ -1,6 +1,6 @@
 /* audio.c — procedural PCM synthesis via waveOut.
-   Works reliably in Wine (maps to ALSA/PulseAudio) unlike MCI MIDI.
-   Two-voice triangle-wave synth: melody (flute-like) + bass (plucked). */
+   Four-voice synth: melody (triangle) + harmony (square pad) + bass (plucked) + percussion (noise).
+   No math.h, no external libs. ADSR envelope per voice. */
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -14,31 +14,31 @@
 #define BUFSZ 4096    /* samples per waveOut buffer (~185ms each) */
 #define NBUFS 2       /* double-buffer */
 
-/* --- Note sequence (110 BPM, C major) --- */
+/* --- Note durations at 110 BPM --- */
 /* Quarter note = SR*60/110 = 12027 samples */
 #define QN 12027
 #define HN (QN*2)
 #define WN (QN*4)
 #define DH (QN*3)   /* dotted half */
 
-typedef struct { float f; int d; } Note; /* frequency Hz, duration samples */
+typedef struct { float f; int d; } Note;  /* frequency Hz, duration samples */
 
-/* Frequencies for the notes we use */
-#define C3f 130.81f
-#define D3f 146.83f
-#define E3f 164.81f
-#define F3f 174.61f
-#define G3f 196.00f
-#define A3f 220.00f
-#define C4f 261.63f
-#define D4f 293.66f
-#define E4f 329.63f
-#define F4f 349.23f
-#define G4f 392.00f
-#define A4f 440.00f
-#define C5f 523.25f
+/* Frequencies */
+#define C3f  130.81f
+#define D3f  146.83f
+#define E3f  164.81f
+#define F3f  174.61f
+#define G3f  196.00f
+#define A3f  220.00f
+#define C4f  261.63f
+#define D4f  293.66f
+#define E4f  329.63f
+#define F4f  349.23f
+#define G4f  392.00f
+#define A4f  440.00f
+#define C5f  523.25f
 
-/* 8-bar melody */
+/* 8-bar melody — triangle, sustained */
 static const Note s_mel[] = {
     {C4f,QN},{E4f,QN},{G4f,QN},{A4f,QN},   /* bar 1: ascending lift    */
     {G4f,DH},{E4f,QN},                       /* bar 2: dotted-half peak  */
@@ -51,7 +51,20 @@ static const Note s_mel[] = {
 };
 #define MEL_N (int)(sizeof(s_mel)/sizeof(s_mel[0]))
 
-/* 8-bar bass line (matches melody loop length exactly) */
+/* 8-bar harmony pad — square, whole notes outlining chords */
+static const Note s_har[] = {
+    {E4f,WN},               /* bar 1: C  — third  */
+    {G4f,WN},               /* bar 2: G  — root   */
+    {E4f,HN},{C4f,HN},     /* bar 3: Am — third, root */
+    {E4f,WN},               /* bar 4: C  — third  */
+    {C4f,WN},               /* bar 5: F  — fifth  */
+    {D4f,WN},               /* bar 6: G  — fifth  */
+    {C4f,WN},               /* bar 7: F  — fifth  */
+    {G4f,WN},               /* bar 8: C  — fifth  */
+};
+#define HAR_N (int)(sizeof(s_har)/sizeof(s_har[0]))
+
+/* 8-bar bass line — triangle, plucked */
 static const Note s_bas[] = {
     {C3f,HN},{C3f,HN},
     {G3f,HN},{G3f,HN},
@@ -64,29 +77,108 @@ static const Note s_bas[] = {
 };
 #define BAS_N (int)(sizeof(s_bas)/sizeof(s_bas[0]))
 
-/* --- Voice oscillator --- */
+/* 1-bar drum loop — noise, off-beats only (f>0 = hit, f=0 = rest) */
+static const Note s_drm[] = {
+    {0.0f,QN},{1.0f,QN},{0.0f,QN},{1.0f,QN},
+};
+#define DRM_N (int)(sizeof(s_drm)/sizeof(s_drm[0]))
+
+/* --- ADSR envelope state --- */
+typedef enum { ENV_ATK, ENV_DCY, ENV_SUS, ENV_REL, ENV_OFF } EnvPhase;
+
+/* --- Voice --- */
 typedef struct {
-    int   ni;   /* note index   */
-    int   np;   /* sample pos within note */
-    float ph;   /* oscillator phase [0,1) */
+    /* sequence position */
+    int      ni, np;
+    float    ph;
+    /* envelope state */
+    float    env;
+    EnvPhase ep;
+    /* envelope params (set once at voice init) */
+    float    atk;        /* per-sample rise during attack  */
+    float    dcy;        /* per-sample fall during decay   */
+    float    sus;        /* sustain level [0,1]            */
+    float    rel;        /* per-sample fall during release */
+    float    gate_frac;  /* fraction of note to hold gate  */
+    /* timbre: 0=triangle  1=square  2=saw  3=noise */
+    int      wave;
 } Voice;
 
-static Voice s_mv, s_bv;
+static Voice s_mv, s_hv, s_bv, s_pv;
 
-static void voice_reset(Voice *v) { v->ni = 0; v->np = 0; v->ph = 0.0f; }
+/* Xorshift noise — no stdlib rand(), deterministic and cheap */
+static uint32_t s_nsr = 0xCAFEBABEu;
+static float noise_next(void) {
+    s_nsr ^= s_nsr << 13;
+    s_nsr ^= s_nsr >> 17;
+    s_nsr ^= s_nsr << 5;
+    return (int32_t)s_nsr / 2147483648.0f;
+}
+
+static void voice_init(Voice *v, int wave,
+                       float atk, float dcy, float sus, float rel,
+                       float gate_frac) {
+    memset(v, 0, sizeof(*v));
+    v->wave      = wave;
+    v->atk       = atk;
+    v->dcy       = dcy;
+    v->sus       = sus;
+    v->rel       = rel;
+    v->gate_frac = gate_frac;
+    v->ep        = ENV_ATK;
+}
 
 static float voice_tick(Voice *v, const Note *seq, int n) {
     const Note *nt = &seq[v->ni];
-    float s = 0.0f;
-    /* gate: note sounds for 80% of its duration, then rests (articulation) */
-    if (v->np < (int)(nt->d * 0.80f) && nt->f > 0.0f) {
-        v->ph += nt->f / (float)SR;
-        if (v->ph >= 1.0f) v->ph -= 1.0f;
-        /* triangle wave — softer than square, no math.h needed */
-        float p = v->ph - 0.5f;
-        s = 1.0f - 4.0f * (p < 0.0f ? -p : p);
+
+    /* Gate off at gate_frac of note duration → begin release */
+    if (v->np == (int)(nt->d * v->gate_frac) && v->ep != ENV_REL && v->ep != ENV_OFF)
+        v->ep = ENV_REL;
+
+    /* ADSR state machine */
+    switch (v->ep) {
+        case ENV_ATK:
+            v->env += v->atk;
+            if (v->env >= 1.0f) { v->env = 1.0f; v->ep = ENV_DCY; }
+            break;
+        case ENV_DCY:
+            v->env -= v->dcy;
+            if (v->env <= v->sus) { v->env = v->sus; v->ep = ENV_SUS; }
+            break;
+        case ENV_SUS: break;
+        case ENV_REL:
+            v->env -= v->rel;
+            if (v->env <= 0.0f) { v->env = 0.0f; v->ep = ENV_OFF; }
+            break;
+        case ENV_OFF: break;
     }
-    if (++v->np >= nt->d) { v->np = 0; v->ni = (v->ni + 1) % n; }
+
+    /* Oscillator */
+    float s = 0.0f;
+    if (v->ep != ENV_OFF && nt->f > 0.0f) {
+        if (v->wave == 3) {
+            s = noise_next();
+        } else {
+            v->ph += nt->f / (float)SR;
+            if (v->ph >= 1.0f) v->ph -= 1.0f;
+            switch (v->wave) {
+                case 0: { float p = v->ph - 0.5f; s = 1.0f - 4.0f*(p<0.0f?-p:p); break; }
+                case 1: s = v->ph < 0.5f ? 1.0f : -1.0f; break;
+                case 2: s = 2.0f * v->ph - 1.0f; break;
+            }
+        }
+        s *= v->env;
+    }
+
+    /* Advance note — fresh attack on next note */
+    if (++v->np >= nt->d) {
+        v->np  = 0;
+        v->ni  = (v->ni + 1) % n;
+        v->ph  = 0.0f;
+        v->env = 0.0f;
+        v->ep  = ENV_ATK;
+    }
+
     return s;
 }
 
@@ -107,8 +199,10 @@ static WAVEHDR        s_hdr[NBUFS];
 static void fill(int16_t *buf, int n) {
     float vol = s_vol / 10.0f;
     for (int i = 0; i < n; i++) {
-        float v = voice_tick(&s_mv, s_mel, MEL_N) * 0.52f
-                + voice_tick(&s_bv, s_bas, BAS_N) * 0.32f;
+        float v = voice_tick(&s_mv, s_mel, MEL_N) * 0.40f
+                + voice_tick(&s_hv, s_har, HAR_N) * 0.12f
+                + voice_tick(&s_bv, s_bas, BAS_N) * 0.25f
+                + voice_tick(&s_pv, s_drm, DRM_N) * 0.07f;
         if (v >  1.0f) v =  1.0f;
         if (v < -1.0f) v = -1.0f;
         buf[i] = (int16_t)(v * 26000.0f * vol);
@@ -134,6 +228,38 @@ static DWORD WINAPI audio_thread(LPVOID arg) {
 void audioPlayWorld(void) {
     if (s_wo) return;
 
+    /* melody: triangle, flute-like — slow attack, high sustain */
+    voice_init(&s_mv, 0,
+        1.0f/(SR*0.015f),       /* 15ms attack  */
+        1.0f/(SR*0.5f),         /* 500ms decay  */
+        0.75f,                  /* sustain       */
+        0.75f/(SR*0.05f),       /* 50ms release */
+        0.85f);
+
+    /* harmony: square, soft pad — slow attack blends in */
+    voice_init(&s_hv, 1,
+        1.0f/(SR*0.08f),        /* 80ms attack  */
+        1.0f/(SR*2.0f),         /* 2s decay      */
+        0.55f,
+        0.55f/(SR*0.06f),       /* 60ms release */
+        0.88f);
+
+    /* bass: triangle, plucked — instant attack, decays to zero */
+    voice_init(&s_bv, 0,
+        1.0f,                   /* instant attack */
+        1.0f/(QN*1.5f),         /* decay over 1.5 quarter notes */
+        0.0f,
+        0.002f,
+        1.0f);                  /* gate held; decay handles articulation */
+
+    /* percussion: noise, hi-hat feel — instant attack, fast decay */
+    voice_init(&s_pv, 3,
+        1.0f,                   /* instant attack */
+        1.0f/(SR*0.04f),        /* 40ms decay */
+        0.0f,
+        0.01f,
+        1.0f);
+
     WAVEFORMATEX fmt;
     fmt.wFormatTag      = WAVE_FORMAT_PCM;
     fmt.nChannels       = 1;
@@ -151,8 +277,6 @@ void audioPlayWorld(void) {
         CloseHandle(s_evt); s_evt = NULL; return;
     }
 
-    voice_reset(&s_mv);
-    voice_reset(&s_bv);
     InterlockedExchange(&s_stop, 0);
 
     for (int i = 0; i < NBUFS; i++) {
