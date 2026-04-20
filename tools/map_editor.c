@@ -38,7 +38,7 @@ static char    portalTargets[MAX_PORTALS][64] = {{0}};
 static uint8_t portalSpawnX[MAX_PORTALS]      = {0};
 static uint8_t portalSpawnY[MAX_PORTALS]      = {0};
 
-static char outfile[64] = "assets/map1.bin";
+static char outfile[64] = "assets/maps/map1.bin";
 
 /* --- Map file discovery ---------------------------------------- */
 static char mapFiles[MAX_MAPFILES][64];
@@ -46,15 +46,15 @@ static int  mapFileCount = 0;
 
 static void scanMaps(void) {
     mapFileCount = 0;
-    DIR *d = opendir("assets");
+    DIR *d = opendir("assets/maps");
     if (!d) return;
     struct dirent *e;
     while ((e = readdir(d)) != NULL && mapFileCount < MAX_MAPFILES) {
         int len = (int)strlen(e->d_name);
-        if (len > 4 && len < 56 && strcmp(e->d_name + len - 4, ".bin") == 0) {
+        if (len > 4 && len < 51 && strcmp(e->d_name + len - 4, ".bin") == 0) {
             char *p = mapFiles[mapFileCount];
-            memcpy(p, "assets/", 7);
-            memcpy(p + 7, e->d_name, (size_t)len + 1);
+            memcpy(p, "assets/maps/", 12);
+            memcpy(p + 12, e->d_name, (size_t)len + 1);
             mapFileCount++;
         }
     }
@@ -403,7 +403,7 @@ int main(int argc, char *argv[]) {
                 else if (pid >= 'a' && pid <= 'f') pidIdx = 10 + pid - 'a';
                 else if (pid >= 'A' && pid <= 'F') pidIdx = 10 + pid - 'A';
                 if (pidIdx >= 0) {
-                    mvprintw(mapH + 8, 0, "Destination: assets/");
+                    mvprintw(mapH + 8, 0, "Destination: assets/maps/");
                     clrtoeol(); refresh();
                     char dest[48] = {0};
                     getnstr(dest, (int)sizeof(dest) - 1);
@@ -418,7 +418,7 @@ int main(int argc, char *argv[]) {
                     getnstr(numBuf, (int)sizeof(numBuf) - 1);
                     int sy = atoi(numBuf);
                     if (dest[0]) {
-                        snprintf(portalTargets[pidIdx], 64, "assets/%s", dest);
+                        snprintf(portalTargets[pidIdx], 64, "assets/maps/%s", dest);
                         portalSpawnX[pidIdx] = (uint8_t)sx;
                         portalSpawnY[pidIdx] = (uint8_t)sy;
                         mapGfx[idx] = 0;
@@ -462,7 +462,7 @@ int main(int argc, char *argv[]) {
             case 'n': case 'N': {
                 if (dirty) { saveMap(); dirty = 0; fileFound = 1; }
                 echo(); curs_set(1);
-                mvprintw(mapH + 7, 0, "New map name: assets/");
+                mvprintw(mapH + 7, 0, "New map name: assets/maps/");
                 clrtoeol();
                 char nameBuf[32] = {0};
                 getnstr(nameBuf, (int)sizeof(nameBuf)-1);
@@ -478,7 +478,7 @@ int main(int argc, char *argv[]) {
                     getnstr(dimBuf, (int)sizeof(dimBuf)-1);
                     int newH = atoi(dimBuf);
                     noecho(); curs_set(0);
-                    snprintf(outfile, sizeof(outfile), "assets/%s.bin", nameBuf);
+                    snprintf(outfile, sizeof(outfile), "assets/maps/%s.bin", nameBuf);
                     resetMapState();
                     if (newW >= 1 && newW <= MAX_W) mapW = newW;
                     if (newH >= 1 && newH <= MAX_H) mapH = newH;

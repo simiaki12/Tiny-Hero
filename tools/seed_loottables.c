@@ -44,7 +44,7 @@ static Table tables[] = {
 };
 
 int main(void) {
-    FILE *f = fopen("assets/loottables.dat", "wb");
+    FILE *f = fopen("assets/data/loottables.dat", "wb");
     if (!f) { fprintf(stderr, "Cannot write assets/loottables.dat\n"); return 1; }
 
     int nTables = (int)(sizeof(tables) / sizeof(tables[0]));

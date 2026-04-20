@@ -20,7 +20,7 @@ static void wOpt(FILE *f, uint8_t skill, uint8_t level, uint8_t next, const char
 }
 
 int main(void) {
-    FILE *f = fopen("assets/dialog.dat", "wb");
+    FILE *f = fopen("assets/data/dialog.dat", "wb");
     if (!f) { fprintf(stderr, "Cannot write assets/dialog.dat\n"); return 1; }
 
     wByte(f, 1); /* tree count */

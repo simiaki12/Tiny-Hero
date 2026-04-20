@@ -260,13 +260,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
 
     if (!pakOpen("data.pak")) return 1;
 
-    PakData playerData  = pakRead("assets/player.dat");
-    PakData itemData    = pakRead("assets/items.dat");
-    PakData enemyData   = pakRead("assets/enemies.dat");
-    PakData dialogData    = pakRead("assets/dialog.dat");
-    PakData questData     = pakRead("assets/quests.dat");
-    PakData lootData      = pakRead("assets/loottables.dat");
-    PakData npcData       = pakRead("assets/npcs.dat");
+    PakData playerData  = pakRead("assets/data/player.dat");
+    PakData itemData    = pakRead("assets/data/items.dat");
+    PakData enemyData   = pakRead("assets/data/enemies.dat");
+    PakData dialogData    = pakRead("assets/data/dialog.dat");
+    PakData questData     = pakRead("assets/data/quests.dat");
+    PakData lootData      = pakRead("assets/data/loottables.dat");
+    PakData npcData       = pakRead("assets/data/npcs.dat");
 
     if (!loadPlayer(playerData)) { pakClose(); return 1; }
     loadItems(itemData);        /* optional — falls back to builtins if not in pak */
@@ -306,7 +306,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR cmdLine, int nCmd
 
     gfxInit(g_hwnd, screenW, screenH);
 
-    if (!worldLoadNamed("assets/map1.bin")) { pakClose(); gfxShutdown(); return 1; }
+    if (!worldLoadNamed("assets/maps/map1.bin")) { pakClose(); gfxShutdown(); return 1; }
     /* pak stays open for dynamic map loading during gameplay */
 
     ShowWindow(g_hwnd, nCmdShow);

@@ -14,7 +14,7 @@
 static DWORD    g_loadingEnd = 0;
 static PakData  g_loadingImg = {0};
 
-static const char *g_introSeq[]   = { "assets/intro_01.bin", "assets/intro_02.bin", "assets/intro_03.bin", "assets/intro_04.bin" , "assets/intro_05.bin", "assets/intro_06.bin" };
+static const char *g_introSeq[]   = { "assets/ui/intro_01.bin", "assets/ui/intro_02.bin", "assets/ui/intro_03.bin", "assets/ui/intro_04.bin" , "assets/ui/intro_05.bin", "assets/ui/intro_06.bin" };
 static const int   g_introCount   = 6;
 static int         g_introIdx     = -1;
 static DWORD       g_introDur     = 0;
@@ -166,7 +166,7 @@ void renderMainMenu(void) {
     const int startY = gfxHeight / 2 - (MENU_ITEMS * lineH) / 2;
 
     fillRect(0, 0, gfxWidth, gfxHeight, rgb(0, 0, 0));
-    drawBWAt(cx - 120, startY - 48, 240, 48, pakRead("assets/logo.bin").data, pakRead("assets/logo.bin").size, rgb(255, 0, 0), rgb(0,0,0));
+    drawBWAt(cx - 120, startY - 48, 240, 48, pakRead("assets/ui/logo.bin").data, pakRead("assets/ui/logo.bin").size, rgb(255, 0, 0), rgb(0,0,0));
 //    drawText(cx - 72, startY - 48, "TINY HERO", rgb(220, 220, 255), 2);
 
     int hasSave = anySaveExists();

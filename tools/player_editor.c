@@ -18,7 +18,7 @@ typedef struct {
 } PlayerData;
 
 static PlayerData p;
-static const char *outfile = "assets/player.dat";
+static const char *outfile = "assets/data/player.dat";
 
 static void load(void) {
     FILE *f = fopen(outfile, "rb");

@@ -25,7 +25,7 @@ static NpcDef defs[] = {
 };
 
 int main(void) {
-    FILE *f = fopen("assets/npcs.dat", "wb");
+    FILE *f = fopen("assets/data/npcs.dat", "wb");
     if (!f) { fprintf(stderr, "Cannot write assets/npcs.dat\n"); return 1; }
 
     int n = (int)(sizeof(defs) / sizeof(defs[0]));

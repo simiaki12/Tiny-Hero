@@ -42,7 +42,7 @@ int main(void) {
     memset(p.equipped, ITEM_UNEQUIPPED, EQUIP_SLOTS);
     memset(p.skills,   0,               SKILL_MAX);
 
-    FILE *f = fopen("assets/player.dat", "wb");
+    FILE *f = fopen("assets/data/player.dat", "wb");
     if (!f) { fprintf(stderr, "Cannot write assets/player.dat\n"); return 1; }
     fwrite(&p, sizeof(PlayerData), 1, f);
     fclose(f);

@@ -42,7 +42,7 @@ typedef char check_size[(sizeof(ItemDef) == 64) ? 1 : -1];
 static ItemDef items[MAX_ITEMS];
 static int     itemCount = 0;
 static int     dirty     = 0;
-static const char *outfile = "assets/items.dat";
+static const char *outfile = "assets/data/items.dat";
 
 static const char *typeNames[] = { "Weapon", "Armor", "Consumable" };
 

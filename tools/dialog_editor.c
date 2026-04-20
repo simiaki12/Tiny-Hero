@@ -57,7 +57,7 @@ typedef struct {
 } DialogTree;
 /* ------------------------------------------------------ */
 
-static const char *outfile = "assets/dialog.dat";
+static const char *outfile = "assets/data/dialog.dat";
 
 static DialogTree trees[DIALOG_MAX_TREES];
 static int        treeCount = 0;

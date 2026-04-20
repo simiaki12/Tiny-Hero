@@ -51,7 +51,7 @@ static EnemyPool pools[] = {
 };
 
 int main(void) {
-    FILE *f = fopen("assets/enemies.dat", "wb");
+    FILE *f = fopen("assets/data/enemies.dat", "wb");
     if (!f) { fprintf(stderr, "Cannot write assets/enemies.dat\n"); return 1; }
 
     int nDefs  = (int)(sizeof(defs)  / sizeof(defs[0]));

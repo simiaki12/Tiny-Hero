@@ -30,7 +30,7 @@ typedef char check_size[(sizeof(NpcDef) == 32) ? 1 : -1];
 static NpcDef npcs[NPC_DEF_MAX];
 static int    npcCount = 0;
 static int    dirty    = 0;
-static const char *outfile = "assets/npcs.dat";
+static const char *outfile = "assets/data/npcs.dat";
 
 /* ---- file I/O ---- */
 

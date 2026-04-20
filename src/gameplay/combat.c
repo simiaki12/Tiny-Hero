@@ -124,7 +124,7 @@ void startCombat(const EnemyDef *def) {
     /* Load sprite */
     if (def->imgName[0]) {
         char path[32];
-        snprintf(path, sizeof(path), "assets/%s.bin", def->imgName);
+        snprintf(path, sizeof(path), "assets/sprites/%s.bin", def->imgName);
         combat.enemyImg = pakRead(path);
     }
 
@@ -420,7 +420,7 @@ void renderCombat(void) {
         /* Lazy-load action sprite */
         if (!actionImgs[aid].data && adef->imgName[0]) {
             char path[32];
-            snprintf(path, sizeof(path), "assets/%s.bin", adef->imgName);
+            snprintf(path, sizeof(path), "assets/sprites/%s.bin", adef->imgName);
             actionImgs[aid] = pakRead(path);
         }
 

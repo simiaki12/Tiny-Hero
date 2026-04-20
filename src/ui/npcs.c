@@ -40,7 +40,7 @@ static void ensureImgsLoaded(void) {
     for (int i = 0; i < npcDefCount; i++) {
         if (npcDefs[i].imgName[0]) {
             char path[32];
-            snprintf(path, sizeof(path), "assets/%.2s.bin", npcDefs[i].imgName);
+            snprintf(path, sizeof(path), "assets/sprites/%.2s.bin", npcDefs[i].imgName);
             npcImgs[i] = pakRead(path);
         } else {
             npcImgs[i].data = NULL;

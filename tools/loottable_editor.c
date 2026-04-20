@@ -39,7 +39,7 @@ static const char *questStatusNames[] = { "Inactive", "Active", "Done" };
 static LootTable tables[LOOT_TABLE_MAX];
 static int       tableCount = 0;
 static int       dirty      = 0;
-static const char *outfile  = "assets/loottables.dat";
+static const char *outfile  = "assets/data/loottables.dat";
 
 /* ---- file I/O ---- */
 

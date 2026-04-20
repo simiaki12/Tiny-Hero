@@ -49,7 +49,7 @@ static int       enemyCount = 0;
 static EnemyPool pools[ENEMY_POOL_MAX];
 static int       poolCount  = 0;
 static int       dirty      = 0;
-static const char *outfile  = "assets/enemies.dat";
+static const char *outfile  = "assets/data/enemies.dat";
 
 /* ---- file I/O ---- */
 

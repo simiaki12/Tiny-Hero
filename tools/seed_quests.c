@@ -79,7 +79,7 @@ static QuestDef quests[] = {
 };
 
 int main(void) {
-    FILE *f = fopen("assets/quests.dat", "wb");
+    FILE *f = fopen("assets/data/quests.dat", "wb");
     if (!f) { fprintf(stderr, "Cannot write assets/quests.dat\n"); return 1; }
 
     int n = (int)(sizeof(quests) / sizeof(quests[0]));

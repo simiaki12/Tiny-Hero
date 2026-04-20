@@ -1,13 +1,13 @@
 CC       = x86_64-w64-mingw32-gcc
 CXX_HOST = g++
 CC_HOST  = gcc
-CFLAGS   = -Wall -Wextra -std=c11
+CFLAGS   = -Wall -Wextra -std=c11 -I src/core -I src/gameplay -I src/world -I src/ui -I src/data
 DEBUGFLAGS   = -g
 RELEASEFLAGS = -Os -flto
 LDFLAGS        = -lgdi32 -lwinmm -mwindows
 LDFLAGS_STATIC = $(LDFLAGS) -static-libgcc
 
-SRC    = $(wildcard src/*.c)
+SRC    = $(shell find src -name '*.c')
 OUT    = build/game.exe
 PACKER      = build/packer
 MAP_EDITOR  = build/map_editor
@@ -93,7 +93,7 @@ seed_enemies:
 migrate_maps:
 	mkdir -p build
 	$(CC_HOST) -std=c11 -Os tools/migrate_map.c -o build/migrate_map
-	./build/migrate_map assets/map1.bin
+	./build/migrate_map assets/maps/map1.bin
 
 img_conv:
 	mkdir -p build

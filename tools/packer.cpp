@@ -25,28 +25,28 @@ struct FileSpec {
 };
 
 int main() {
-    /* Auto-discover all map binaries in assets/ */
+    /* Auto-discover all binaries under assets/ */
     std::vector<std::string> mapBins;
     if (fs::is_directory("assets")) {
-        for (auto &entry : fs::directory_iterator("assets"))
+        for (auto &entry : fs::recursive_directory_iterator("assets"))
             if (entry.path().extension() == ".bin")
                 mapBins.push_back(normPath(entry.path().string()));
         std::sort(mapBins.begin(), mapBins.end());
     }
     if (mapBins.empty()) {
-        std::cerr << "No map .bin files found in assets/\n";
+        std::cerr << "No .bin files found in assets/\n";
         return 1;
     }
 
     std::vector<FileSpec> specs;
     for (auto &m : mapBins) specs.push_back({ m, true });
-    specs.push_back({ "assets/player.dat",       true  });
-    specs.push_back({ "assets/items.dat",        false });
-    specs.push_back({ "assets/enemies.dat",      false });
-    specs.push_back({ "assets/dialog.dat",       false });
-    specs.push_back({ "assets/quests.dat",       false });
-    specs.push_back({ "assets/loottables.dat",   false });
-    specs.push_back({ "assets/npcs.dat",         false });
+    specs.push_back({ "assets/data/player.dat",       true  });
+    specs.push_back({ "assets/data/items.dat",        false });
+    specs.push_back({ "assets/data/enemies.dat",      false });
+    specs.push_back({ "assets/data/dialog.dat",       false });
+    specs.push_back({ "assets/data/quests.dat",       false });
+    specs.push_back({ "assets/data/loottables.dat",   false });
+    specs.push_back({ "assets/data/npcs.dat",         false });
 
     /* Resolve which files are present */
     std::vector<std::string> files;

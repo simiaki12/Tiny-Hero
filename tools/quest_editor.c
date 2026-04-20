@@ -57,7 +57,7 @@ typedef struct {
 } QuestDef;
 /* ------------------------------------------------------ */
 
-static const char *outfile = "assets/quests.dat";
+static const char *outfile = "assets/data/quests.dat";
 
 static QuestDef quests[MAX_QUESTS];
 static int      questCount = 0;

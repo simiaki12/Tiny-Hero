@@ -42,7 +42,7 @@ int main(void) {
     typedef char check_size[(sizeof(ItemDef) == 64) ? 1 : -1];
     (void)sizeof(check_size);
 
-    FILE *f = fopen("assets/items.dat", "wb");
+    FILE *f = fopen("assets/data/items.dat", "wb");
     if (!f) { fprintf(stderr, "Cannot write assets/items.dat\n"); return 1; }
 
     int n = (int)(sizeof(items) / sizeof(items[0]));
