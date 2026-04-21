@@ -59,7 +59,7 @@ void gfxPresent(HWND hwnd) {
         r = (RECT){0, offY + dstH, g_winW, g_winH}; FillRect(hdc, &r, black);
     }
 
-    SetStretchBltMode(hdc, HALFTONE);
+    SetStretchBltMode(hdc, COLORONCOLOR);
     StretchBlt(hdc, offX, offY, dstW, dstH, g_backDC, 0, 0, gfxWidth, gfxHeight, SRCCOPY);
     ReleaseDC(hwnd, hdc);
 }

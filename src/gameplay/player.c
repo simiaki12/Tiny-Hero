@@ -33,7 +33,7 @@ int awardXp(int amount) {
         player.hp = player.maxHp;
         gained++;
     }
-    player.xp = (uint8_t)(xp > 255 ? 255 : xp);
+    player.xp = (uint16_t)xp;
     return gained;
 }
 

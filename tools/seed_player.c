@@ -17,7 +17,7 @@ typedef struct {
     uint8_t  equipped[EQUIP_SLOTS];
     uint8_t  skills[SKILL_MAX];
     uint8_t  level;
-    uint8_t  xp;
+    uint16_t xp;
     uint8_t  skillPoints;
     uint8_t  hp;
     uint8_t  intelligence;
