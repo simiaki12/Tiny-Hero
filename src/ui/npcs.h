@@ -24,5 +24,5 @@ extern NpcDef npcDefs[NPC_DEF_MAX];
 extern int    npcDefCount;
 
 int  loadNpcs(PakData data);
-void renderNpcs(int rCamX, int rCamY);
+void renderNpcs(int tx, int ty, int rCamX, int rCamY);
 void npcTryInteract(void);  /* called on E key — starts dialog if adjacent NPC found */

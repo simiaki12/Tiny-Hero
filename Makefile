@@ -37,6 +37,11 @@ gen_world_music:
 	$(CC_HOST) -std=c11 -Os tools/gen_world_music.c -o build/gen_world_music
 	./build/gen_world_music
 
+gen_iso_tiles:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/gen_iso_tiles.c -o build/gen_iso_tiles
+	./build/gen_iso_tiles
+
 packer:
 	mkdir -p build
 	$(CXX_HOST) -std=c++17 -Os tools/packer.cpp -o $(PACKER)

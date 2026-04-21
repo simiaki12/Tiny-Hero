@@ -3,6 +3,9 @@
 #include "pak.h"
 
 #define TILE_SIZE     64
+#define TILE_W        64          /* iso diamond screen width  */
+#define TILE_H        32          /* iso diamond screen height */
+#define WALL_H        TILE_H      /* wall front-face height    */
 #define MAX_MAP_TILES (256 * 256)
 
 /* mapGfx tile type constants */

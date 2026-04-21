@@ -18,3 +18,4 @@ void     drawSprite8(int x, int y, const uint8_t* data, const uint32_t* pal, int
 void     drawBin(int x, int y, const uint8_t *data, int scale);
 void     drawBW(const uint8_t *data, uint32_t size, uint32_t color);
 void     drawBWAt(int x, int y, int dstW, int dstH, const uint8_t *data, uint32_t size, uint32_t color, uint32_t color2);
+void     drawIsoTile(int cx, int cy, uint32_t top, uint32_t side, int wall_h);
