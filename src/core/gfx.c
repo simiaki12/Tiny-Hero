@@ -143,12 +143,27 @@ static int bin_bits_needed(int n) {
     return b;
 }
 
+/* Returns 1 if (x,y) falls inside the tile diamond+walls for a tile of size w×h */
+static int tile_in_bounds(int x, int y, int w, int h) {
+    int dh = w/2, hdh = w/4, wh = h-dh, cx = w/2;
+    int r = y+1;
+    if (r >= 1 && r < dh) {
+        int span = (r <= hdh ? r : dh-r) * (w/hdh);
+        if (x >= cx-span/2 && x < cx+span/2) return 1;
+    }
+    if (wh > 0) {
+        if (x < cx) { int ty = hdh+x/2; if (y >= ty && y < ty+wh) return 1; }
+        else { int col=x-cx; int ty=dh-1-col/2; if (y >= ty && y < ty+wh) return 1; }
+    }
+    return 0;
+}
+
 void drawBin(int x, int y, const uint8_t *data, int scale) {
     if (!data) return;
-    int w            = data[0];
-    int h            = data[1];
-    int8_t cc        = (int8_t)data[2];
-    int n_colors;
+    int w       = data[0];
+    int h       = data[1];
+    int8_t cc   = (int8_t)data[2];
+    int n_colors, tile_mode = 0;
     uint32_t pal[127];
 
     const uint8_t *src = data + 3;
@@ -162,6 +177,12 @@ void drawBin(int x, int y, const uint8_t *data, int scale) {
             pal[ci] = rgb(g_builtin_pal[id][ci][0],
                           g_builtin_pal[id][ci][1],
                           g_builtin_pal[id][ci][2]);
+    } else if (cc == 0) {
+        /* Tile-compressed (.til): next byte is actual n_colors */
+        tile_mode = 1;
+        n_colors  = (int)(*src++);
+        for (int ci = 0; ci < n_colors; ci++, src += 3)
+            pal[ci] = rgb(src[0], src[1], src[2]);
     } else {
         /* Inline palette */
         n_colors = (int)cc;
@@ -175,14 +196,18 @@ void drawBin(int x, int y, const uint8_t *data, int scale) {
     int bit_pos = 0;
     for (int row = 0; row < h; row++) {
         for (int col = 0; col < w; col++) {
-            /* Unpack next index MSB-first */
-            int val = 0;
-            for (int b = bpp - 1; b >= 0; b--) {
-                if ((src[bit_pos / 8] >> (7 - (bit_pos % 8))) & 1)
-                    val |= (1 << b);
-                bit_pos++;
+            int val;
+            if (tile_mode && !tile_in_bounds(col, row, w, h)) {
+                val = n_colors; /* transparent corner — no bits consumed */
+            } else {
+                val = 0;
+                for (int b = bpp-1; b >= 0; b--) {
+                    if ((src[bit_pos/8] >> (7-(bit_pos%8))) & 1)
+                        val |= (1 << b);
+                    bit_pos++;
+                }
+                val &= mask;
             }
-            val &= mask;
             if (val == n_colors) continue; /* transparent */
 
             int px = x + col * scale;

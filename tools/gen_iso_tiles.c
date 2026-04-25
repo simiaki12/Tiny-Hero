@@ -11,8 +11,8 @@
 #include <stdint.h>
 
 /* ── canvas ──────────────────────────────────────────── */
-#define CW 64
-#define MAXH 64
+#define CW 32
+#define MAXH 48
 static uint8_t G[MAXH * CW * 4]; /* RGBA, row-major */
 static int cH;
 
@@ -39,19 +39,19 @@ static int ni(int x, int y, int n) { return (int)(nh(x, y) % (uint32_t)n); }
    Row r=y+1, span=(r<=16)?r*4:(32-r)*4, centre at x=32. */
 static int in_top(int x, int y) {
     int r = y + 1;
-    if (r < 1 || r > 31) return 0;
-    int span = (r <= 16) ? r * 4 : (32 - r) * 4;
-    return x >= 32 - span/2 && x < 32 + span/2;
+    if (r < 1 || r > 15) return 0;
+    int span = (r <= 8) ? r * 4 : (16 - r) * 4;
+    return x >= 16 - span/2 && x < 16 + span/2;
 }
 static int in_left_wall(int x, int y, int wh) {
-    if (x < 0 || x >= 32) return 0;
-    int ty = 16 + x / 2;
+    if (x < 0 || x >= 16) return 0;
+    int ty = 8 + x / 2;
     return y >= ty && y < ty + wh;
 }
 static int in_right_wall(int x, int y, int wh) {
-    if (x < 32 || x >= CW) return 0;
-    int col = x - 32;
-    int ty = 32 - col / 2;
+    if (x < 16 || x >= CW) return 0;
+    int col = x - 16;
+    int ty = 15 - col / 2;
     return y >= ty && y < ty + wh;
 }
 
@@ -66,14 +66,14 @@ static void paint_top(CF f) {
         }
 }
 static void paint_left(int wh, CF f) {
-    for (int x = 0; x < 32; x++)
-        for (int y = 16+x/2; y < 16+x/2+wh && y < cH; y++) {
+    for (int x = 0; x < 16; x++)
+        for (int y = 8+x/2; y < 8+x/2+wh && y < cH; y++) {
             uint8_t r,g,b; f(x,y,&r,&g,&b); px(x,y,r,g,b);
         }
 }
 static void paint_right(int wh, CF f) {
-    for (int x = 32; x < CW; x++) {
-        int ty = 32 - (x-32)/2;
+    for (int x = 16; x < CW; x++) {
+        int ty = 15 - (x-16)/2;
         for (int y = ty; y < ty+wh && y < cH; y++) {
             uint8_t r,g,b; f(x,y,&r,&g,&b); px(x,y,r,g,b);
         }
@@ -179,17 +179,17 @@ static void cf_water(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
 
 /* ── ROAD ─────────────────────────────────────────── */
 static void cf_road(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
-    int track = (x + y * 2) % 18;
-    if (track < 2)          { *r=62;  *g=52;  *b=34; }
-    else if (track < 7)     { *r=105; *g=90;  *b=62; }
-    else if (track == 8 || track == 9) { *r=128; *g=112; *b=80; }
-    else if (track < 16)    { *r=105; *g=90;  *b=62; }
+    int track = (x + y * 2) % 9;
+    if (track == 0)         { *r=62;  *g=52;  *b=34; }
+    else if (track < 4)     { *r=105; *g=90;  *b=62; }
+    else if (track == 4)    { *r=128; *g=112; *b=80; }
+    else if (track < 8)     { *r=105; *g=90;  *b=62; }
     else                    { *r=62;  *g=52;  *b=34; }
 }
 
 /* ── BRIDGE ──────────────────────────────────────── */
 static void cf_bridge(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
-    int plank = ((x - y + 96) / 5) % 3;
+    int plank = ((x - y + 32) / 3) % 3;
     /* plank-end grain at edges */
     int grain = (ni(x,y+x/5,8) < 2);
     if (plank == 2)         { *r=38;  *g=25;  *b=12; } /* gap */
@@ -200,8 +200,8 @@ static void cf_bridge(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
 
 /* ── BUILDING FLOOR ──────────────────────────────── */
 static void cf_bldg(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
-    if (x % 10 == 0 || y % 10 == 0) { *r=98;  *g=88;  *b=72; return; }
-    int tx=x/10, ty=y/10;
+    if (x % 5 == 0 || y % 5 == 0) { *r=98;  *g=88;  *b=72; return; }
+    int tx=x/5, ty=y/5;
     if ((tx+ty)%2==0)       { *r=192; *g=178; *b=150; }
     else                    { *r=162; *g=148; *b=122; }
 }
@@ -238,7 +238,7 @@ static void cf_hills_right(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
 
 /* ── STONE WALL helpers ──────────────────────────── */
 /* brick_row / brick_col give the mortar-grid position */
-static int brick_offset(int local_y) { return (local_y / 8) % 2 ? 6 : 0; }
+static int brick_offset(int local_y) { return (local_y / 4) % 2 ? 3 : 0; }
 
 static void cf_stone_top(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
     int v = ni(x,y,6);
@@ -247,22 +247,21 @@ static void cf_stone_top(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
     else                { *r=148; *g=145; *b=154; }
 }
 static void cf_stone_left(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
-    int ly = y - (16 + x/2);
+    int ly = y - (8 + x/2);
     if (ly < 0) ly = 0;
-    /* mortar rows and vertical joints */
-    if (ly % 8 == 0)                            { *r=148; *g=145; *b=152; return; }
-    if ((x + brick_offset(ly)) % 12 == 0)       { *r=148; *g=145; *b=152; return; }
+    if (ly % 4 == 0)                            { *r=148; *g=145; *b=152; return; }
+    if ((x + brick_offset(ly)) % 6 == 0)        { *r=148; *g=145; *b=152; return; }
     int v = ni(x + ly*3, ly, 5);
     if (v < 2)          { *r=68;  *g=66;  *b=73; }
     else if (v < 4)     { *r=80;  *g=78;  *b=86; }
     else                { *r=90;  *g=88;  *b=97; }
 }
 static void cf_stone_right(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
-    int col = x - 32;
-    int ly = y - (32 - col/2);
+    int col = x - 16;
+    int ly = y - (16 - col/2);
     if (ly < 0) ly = 0;
-    if (ly % 8 == 0)                            { *r=112; *g=110; *b=116; return; }
-    if ((col + brick_offset(ly)) % 12 == 0)     { *r=112; *g=110; *b=116; return; }
+    if (ly % 4 == 0)                            { *r=112; *g=110; *b=116; return; }
+    if ((col + brick_offset(ly)) % 6 == 0)      { *r=112; *g=110; *b=116; return; }
     int v = ni(x + ly*3, ly, 5);
     if (v < 2)          { *r=48;  *g=46;  *b=52; }
     else if (v < 4)     { *r=58;  *g=56;  *b=63; }
@@ -277,18 +276,18 @@ static void cf_cave_top(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
     else                { *r=46;  *g=45;  *b=54; }
 }
 static void cf_cave_left(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
-    int ly = y - (16 + x/2);
+    int ly = y - (8 + x/2);
     if (ly < 0) ly = 0;
-    if (ly % 11 == 0 || ly % 11 == 10)         { *r=52;  *g=50;  *b=60; return; }
+    if (ly % 6 == 0 || ly % 6 == 5)            { *r=52;  *g=50;  *b=60; return; }
     int v = ni(x, ly, 4);
     if (v < 2)          { *r=18;  *g=17;  *b=22; }
     else                { *r=28;  *g=27;  *b=34; }
 }
 static void cf_cave_right(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
-    int col = x - 32;
-    int ly = y - (32 - col/2);
+    int col = x - 16;
+    int ly = y - (16 - col/2);
     if (ly < 0) ly = 0;
-    if (ly % 11 == 0 || ly % 11 == 10)         { *r=38;  *g=37;  *b=44; return; }
+    if (ly % 6 == 0 || ly % 6 == 5)            { *r=38;  *g=37;  *b=44; return; }
     int v = ni(x, ly, 4);
     if (v < 2)          { *r=12;  *g=11;  *b=15; }
     else                { *r=20;  *g=19;  *b=24; }
@@ -297,28 +296,27 @@ static void cf_cave_right(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
 /* ── MOUNTAINS ───────────────────────────────────── */
 static void cf_mtn_top(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
     /* snow cap in the upper-centre of the diamond */
-    int dist = abs(x - 32) + y * 2;
-    if (dist < 12)      { *r=238; *g=240; *b=245; return; } /* snow */
+    int dist = abs(x - 16) + y * 2;
+    if (dist < 6)       { *r=238; *g=240; *b=245; return; } /* snow */
     int v = ni(x,y,6);
     if (v < 2)          { *r=112; *g=108; *b=118; }
     else if (v < 5)     { *r=132; *g=128; *b=138; }
     else                { *r=152; *g=148; *b=158; }
 }
 static void cf_mtn_left(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
-    int ly = y - (16 + x/2);
+    int ly = y - (8 + x/2);
     if (ly < 0) ly = 0;
-    /* rocky crevices */
-    if ((ly + x/3) % 9 == 0)                   { *r=60;  *g=58;  *b=65; return; }
+    if ((ly + x/3) % 5 == 0)                   { *r=60;  *g=58;  *b=65; return; }
     int v = ni(x + ly, y, 5);
     if (v < 2)          { *r=78;  *g=75;  *b=83; }
     else if (v < 4)     { *r=90;  *g=87;  *b=96; }
     else                { *r=100; *g=97;  *b=107; }
 }
 static void cf_mtn_right(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
-    int col = x - 32;
-    int ly = y - (32 - col/2);
+    int col = x - 16;
+    int ly = y - (16 - col/2);
     if (ly < 0) ly = 0;
-    if ((ly + col/3) % 9 == 0)                 { *r=42;  *g=40;  *b=47; return; }
+    if ((ly + col/3) % 5 == 0)                 { *r=42;  *g=40;  *b=47; return; }
     int v = ni(x + ly, y, 5);
     if (v < 2)          { *r=55;  *g=53;  *b=60; }
     else if (v < 4)     { *r=65;  *g=63;  *b=71; }
@@ -337,20 +335,19 @@ static void cf_tree_top(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
     if (ni(x,y,18)==0)  { *r=42;  *g=118; *b=32; }
 }
 static void cf_tree_left(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
-    int ly = y - (16 + x/2);
+    int ly = y - (8 + x/2);
     if (ly < 0) ly = 0;
-    /* trunk lower half, foliage upper */
-    if (ly > 16)        { *r=62;  *g=40;  *b=18; }
+    if (ly > 8)         { *r=62;  *g=40;  *b=18; }
     else                { *r=20;  *g=68;  *b=15; }
-    if (ly > 16 && ni(x,ly,6)==0) { *r=45; *g=28; *b=10; } /* bark mark */
+    if (ly > 8 && ni(x,ly,6)==0) { *r=45; *g=28; *b=10; }
 }
 static void cf_tree_right(int x, int y, uint8_t *r, uint8_t *g, uint8_t *b) {
-    int col = x - 32;
-    int ly = y - (32 - col/2);
+    int col = x - 16;
+    int ly = y - (16 - col/2);
     if (ly < 0) ly = 0;
-    if (ly > 16)        { *r=45;  *g=28;  *b=12; }
+    if (ly > 8)         { *r=45;  *g=28;  *b=12; }
     else                { *r=14;  *g=50;  *b=10; }
-    if (ly > 16 && ni(x,ly,6)==0) { *r=30; *g=18; *b=6; }
+    if (ly > 8 && ni(x,ly,6)==0) { *r=30; *g=18; *b=6; }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -481,58 +478,59 @@ int main(void) {
     system("mkdir -p assets/tiles");
     printf("Generating iso tiles...\n");
 
-    /* ── flat tiles (64×32) ──────────────────────────── */
-    canvas(32);
+    /* ── flat tiles (32×16) ──────────────────────────── */
+    canvas(16);
     paint_top(cf_grass);       write_bin("assets/tiles/grass.bin");
-    canvas(32);
+    canvas(16);
     paint_top(cf_grass_enemy); write_bin("assets/tiles/grass_enemy.bin");
-    canvas(32);
+    canvas(16);
     paint_top(cf_grass_town);  write_bin("assets/tiles/grass_town.bin");
-    canvas(32);
+    canvas(16);
     paint_top(cf_grass_dungeon);write_bin("assets/tiles/grass_dungeon.bin");
-    canvas(32);
+    canvas(16);
     paint_top(cf_grass_portal);write_bin("assets/tiles/grass_portal.bin");
-    canvas(32);
+    canvas(16);
     paint_top(cf_water);       write_bin("assets/tiles/river.bin");
-    canvas(32);
+    canvas(16);
     paint_top(cf_road);        write_bin("assets/tiles/road.bin");
-    canvas(32);
+    canvas(16);
     paint_top(cf_bridge);      write_bin("assets/tiles/bridge.bin");
-    canvas(32);
+    canvas(16);
     paint_top(cf_bldg);        write_bin("assets/tiles/bldg_floor.bin");
-    canvas(32);
+    canvas(16);
     paint_top(cf_cave_floor);  write_bin("assets/tiles/cave_floor.bin");
 
-    /* ── half-block tiles (64×48, wall_h=16) ────────── */
-    canvas(48);
+    /* ── half-block tiles (32×24, wall_h=8) ─────────── */
+    canvas(24);
     paint_top(cf_hills_top);
-    paint_left(16, cf_hills_left);
-    paint_right(16, cf_hills_right);
+    paint_left(8, cf_hills_left);
+    paint_right(8, cf_hills_right);
     write_bin("assets/tiles/hills.bin");
 
-    /* ── full-block tiles (64×64, wall_h=32) ─────────── */
-    canvas(64);
+    /* ── full-block tiles (32×32, wall_h=16) ─────────── */
+    canvas(32);
     paint_top(cf_stone_top);
-    paint_left(32, cf_stone_left);
-    paint_right(32, cf_stone_right);
+    paint_left(16, cf_stone_left);
+    paint_right(16, cf_stone_right);
     write_bin("assets/tiles/wall.bin");
 
-    canvas(64);
+    /* ── double-block tiles (32×48, wall_h=32) ────────── */
+    canvas(48);
     paint_top(cf_cave_top);
     paint_left(32, cf_cave_left);
     paint_right(32, cf_cave_right);
     write_bin("assets/tiles/cave_wall.bin");
 
-    canvas(64);
+    canvas(48);
     paint_top(cf_mtn_top);
     paint_left(32, cf_mtn_left);
     paint_right(32, cf_mtn_right);
     write_bin("assets/tiles/mountains.bin");
 
-    canvas(64);
+    canvas(32);
     paint_top(cf_tree_top);
-    paint_left(32, cf_tree_left);
-    paint_right(32, cf_tree_right);
+    paint_left(16, cf_tree_left);
+    paint_right(16, cf_tree_right);
     write_bin("assets/tiles/tree.bin");
 
     printf("Generating player sprites...\n");

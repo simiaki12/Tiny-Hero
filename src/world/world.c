@@ -36,7 +36,7 @@ static int     g_tilesLoaded = 0;
 
 static void loadTileImgs(void) {
     static const char *paths[N_TILE_IMGS] = {
-        "assets/tiles/grass.bin",
+        "assets/tiles/grass.til",
         "assets/tiles/grass_enemy.bin",
         "assets/tiles/grass_town.bin",
         "assets/tiles/grass_dungeon.bin",
@@ -285,7 +285,7 @@ void renderWorld(void) {
 
             /* Cull tiles fully off-screen (tallest tile is 64px) */
             if (cx + TILE_W / 2 < 0 || cx - TILE_W / 2 > gfxWidth)  continue;
-            if (cy + 64 < 0 || cy > gfxHeight)                        continue;
+            if (cy + 96 < 0 || cy > gfxHeight + 2 * TILE_H)            continue;
 
             uint8_t gfx = mapGfx[ty * mapWidth + tx];
             uint8_t loc = mapLoc[ty * mapWidth + tx];
@@ -312,8 +312,11 @@ void renderWorld(void) {
             }
 
             PakData *td = &g_tileImgs[img_idx];
-            if (td->data)
-                drawBin(cx - TILE_W / 2, cy, (const uint8_t *)td->data, 1);
+            if (td->data) {
+                /* Shift tall tiles up so their wall base sits at ground level */
+                int draw_y = cy + TILE_H - (int)((const uint8_t *)td->data)[1] * 2;
+                drawBin(cx - TILE_W / 2, draw_y, (const uint8_t *)td->data, 2);
+            }
 
             /* Draw NPCs and player inline at correct painter depth */
             renderNpcs(tx, ty, rCamX, rCamY);
