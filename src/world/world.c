@@ -51,10 +51,10 @@ static void loadTileImgs(void) {
         "assets/tiles/bridge.til",
         "assets/tiles/bldg_floor.bin",
         "assets/tiles/cave.til",
-        "assets/tiles/hills.bin",
+        "assets/tiles/hills.til",
         "assets/tiles/map_wall.til",
         "assets/tiles/cave_wall.til",
-        "assets/tiles/mountains.bin",
+        "assets/tiles/mountain.til",
         "assets/tiles/tree.bin",
         "assets/tiles/tavern_wall.til",
     };
