@@ -4,16 +4,20 @@
         {
             "name": "Win32 (MinGW cross-compile)",
             "includePath": [
-                "${workspaceFolder}/src",
+                "${workspaceFolder}/src/core",
+                "${workspaceFolder}/src/gameplay",
+                "${workspaceFolder}/src/world",
+                "${workspaceFolder}/src/ui",
+                "${workspaceFolder}/src/data",
                 "/usr/x86_64-w64-mingw32/include",
-                "/usr/lib/gcc/x86_64-w64-mingw32/10-win32/include/c++",
-                "/usr/lib/gcc/x86_64-w64-mingw32/10-win32/include/c++/x86_64-w64-mingw32"
+                "/usr/lib/gcc/x86_64-w64-mingw32/10-win32/include"
             ],
             "defines": [
                 "_WIN32",
                 "WIN32"
             ],
-            "compilerPath": "/usr/bin/x86_64-w64-mingw32-g++",
+            "compilerPath": "/usr/bin/x86_64-w64-mingw32-gcc",
+            "cStandard": "c11",
             "cppStandard": "c++17",
             "intelliSenseMode": "gcc-x64"
         }

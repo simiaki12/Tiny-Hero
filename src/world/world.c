@@ -11,6 +11,63 @@
 #include "quests.h"
 #include "npcs.h"
 #include "tiles8x8.h"
+#include "pak.h"
+
+/* ── iso tile images, lazy-loaded on first render ── */
+#define TIMG_GRASS       0
+#define TIMG_GRASS_1     1
+#define TIMG_GRASS_2     2
+#define TIMG_GRASS_ENEMY 3
+#define TIMG_GRASS_TOWN  4
+#define TIMG_GRASS_DUNG  5
+#define TIMG_GRASS_PORT  6
+#define TIMG_RIVER       7
+#define TIMG_ROAD        8
+#define TIMG_BRIDGE      9
+#define TIMG_BLDG_FLOOR  10
+#define TIMG_CAVE_FLOOR  11
+#define TIMG_HILLS       12
+#define TIMG_WALL        13
+#define TIMG_CAVE_WALL   14
+#define TIMG_MOUNTAINS   15
+#define TIMG_TREE        16
+#define TIMG_TAVERN_WALL 17
+#define N_TILE_IMGS      18
+
+static PakData g_tileImgs[N_TILE_IMGS];
+static int     g_tilesLoaded = 0;
+
+static void loadTileImgs(void) {
+    static const char *paths[N_TILE_IMGS] = {
+        "assets/tiles/grass.til",
+        "assets/tiles/grass_1.til",
+        "assets/tiles/grass_2.til",
+        "assets/tiles/enemy.til",
+        "assets/tiles/house.til",
+        "assets/tiles/grass_dungeon.bin",
+        "assets/tiles/portal.til",
+        "assets/tiles/water.til",
+        "assets/tiles/road.til",
+        "assets/tiles/bridge.til",
+        "assets/tiles/bldg_floor.bin",
+        "assets/tiles/cave.til",
+        "assets/tiles/hills.til",
+        "assets/tiles/map_wall.til",
+        "assets/tiles/cave_wall.til",
+        "assets/tiles/mountain.til",
+        "assets/tiles/tree.bin",
+        "assets/tiles/tavern_wall.til",
+    };
+    for (int i = 0; i < N_TILE_IMGS; i++)
+        g_tileImgs[i] = pakRead(paths[i]);
+    g_tilesLoaded = 1;
+}
+
+static int tileHash(int x, int y, int n) {
+    uint32_t h = (uint32_t)(x * 374761393u + y * 668265263u);
+    h ^= h >> 13; h *= 1274126177u; h ^= h >> 16;
+    return (int)(h % (uint32_t)n);
+}
 
 int     worldPlayerX  = 2;
 int     worldPlayerY  = 2;
@@ -42,18 +99,9 @@ uint8_t portalSpawnX[MAX_PORTALS]     = {0};
 uint8_t portalSpawnY[MAX_PORTALS]     = {0};
 
 void worldUpdateCamera(void) {
-    camX = worldPlayerX * TILE_SIZE + TILE_SIZE / 2 - gfxWidth  / 2;
-    camY = worldPlayerY * TILE_SIZE + TILE_SIZE / 2 - gfxHeight / 2;
-
-    int maxCamX = mapWidth  * TILE_SIZE - gfxWidth;
-    int maxCamY = mapHeight * TILE_SIZE - gfxHeight;
-
-    /* if map is smaller than the viewport, center it */
-    if (maxCamX <= 0) { camX = maxCamX / 2; }
-    else              { if (camX < 0) camX = 0; if (camX > maxCamX) camX = maxCamX; }
-
-    if (maxCamY <= 0) { camY = maxCamY / 2; }
-    else              { if (camY < 0) camY = 0; if (camY > maxCamY) camY = maxCamY; }
+    /* Camera tracks player in isometric pixel space; no clamping needed. */
+    camX = (worldPlayerX - worldPlayerY) * (TILE_W / 2);
+    camY = (worldPlayerX + worldPlayerY) * (TILE_H / 2);
 }
 
 /* Map binary layout:
@@ -186,9 +234,9 @@ void handleWorldInput(int key) {
         g_camSlideStartY = oldCamY - camY;
         g_camSlideX      = g_camSlideStartX;
         g_camSlideY      = g_camSlideStartY;
-        /* Player offset: always the full tile, independent of camera. */
-        g_plrOffStartX   = -dx * TILE_SIZE;
-        g_plrOffStartY   = -dy * TILE_SIZE;
+        /* Player offset in iso pixel space: starts at old iso position. */
+        g_plrOffStartX   = -(dx - dy) * (TILE_W / 2);
+        g_plrOffStartY   = -(dx + dy) * (TILE_H / 2);
         g_plrOffX        = g_plrOffStartX;
         g_plrOffY        = g_plrOffStartY;
         g_moveStart   = GetTickCount();
@@ -231,61 +279,83 @@ void returnToTown(void) {
 }
 
 void renderWorld(void) {
-    /* Both tiles and player use the sliding camera so the whole viewport
-       glides smoothly — no tile snap. The player appears one tile ahead of
-       centre at t=0 and slides back to centre as rCam catches up, which
-       reads as forward motion against the scrolling background. */
+    if (!g_tilesLoaded) loadTileImgs();
+
     int rCamX = camX + g_camSlideX;
     int rCamY = camY + g_camSlideY;
 
-    /* Clamp rCam to valid map bounds so the slide never reveals off-map area. */
-    int maxCamX = mapWidth  * TILE_SIZE - gfxWidth;
-    int maxCamY = mapHeight * TILE_SIZE - gfxHeight;
-    if (maxCamX <= 0) { rCamX = maxCamX / 2; }
-    else { if (rCamX < 0) rCamX = 0; if (rCamX > maxCamX) rCamX = maxCamX; }
-    if (maxCamY <= 0) { rCamY = maxCamY / 2; }
-    else { if (rCamY < 0) rCamY = 0; if (rCamY > maxCamY) rCamY = maxCamY; }
+    fillRect(0, 0, gfxWidth, gfxHeight, rgb(10, 10, 15));
 
-    int tileX0 = rCamX / TILE_SIZE;
-    int tileY0 = rCamY / TILE_SIZE;
-    int tileX1 = (rCamX + gfxWidth  + TILE_SIZE - 1) / TILE_SIZE;
-    int tileY1 = (rCamY + gfxHeight + TILE_SIZE - 1) / TILE_SIZE;
-    if (tileX0 < 0) tileX0 = 0;
-    if (tileY0 < 0) tileY0 = 0;
-    if (tileX1 > mapWidth)  tileX1 = mapWidth;
-    if (tileY1 > mapHeight) tileY1 = mapHeight;
+    int playerSum  = worldPlayerX + worldPlayerY;
+    int plrScreenX = (worldPlayerX - worldPlayerY) * (TILE_W / 2) - rCamX + gfxWidth  / 2 + g_plrOffX;
+    int plrScreenY = (worldPlayerX + worldPlayerY) * (TILE_H / 2) - rCamY + gfxHeight / 2 + g_plrOffY;
 
-    int scale = TILE_SIZE / 8;
-    for (int y = tileY0; y < tileY1; y++) {
-        for (int x = tileX0; x < tileX1; x++) {
-            uint8_t        gfx = mapGfx[y * mapWidth + x];
-            uint8_t        loc = mapLoc[y * mapWidth + x];
-            const uint8_t *tile;
+    /* Painter's algorithm: draw back-to-front by ascending (tx+ty) sum */
+    for (int sum = 0; sum < mapWidth + mapHeight - 1; sum++) {
+        for (int tx = 0; tx <= sum; tx++) {
+            int ty = sum - tx;
+            if (tx < 0 || tx >= mapWidth || ty < 0 || ty >= mapHeight) continue;
+
+            int cx = (tx - ty) * (TILE_W / 2) - rCamX + gfxWidth  / 2;
+            int cy = (tx + ty) * (TILE_H / 2) - rCamY + gfxHeight / 2;
+
+            /* Cull tiles fully off-screen (tallest tile is 64px) */
+            if (cx + TILE_W / 2 < 0 || cx - TILE_W / 2 > gfxWidth)  continue;
+            if (cy + 96 < 0 || cy > gfxHeight + 2 * TILE_H)            continue;
+
+            uint8_t gfx = mapGfx[ty * mapWidth + tx];
+            uint8_t loc = mapLoc[ty * mapWidth + tx];
+            int img_idx;
+
             switch (gfx) {
-                case GFX_WALL:           tile = TILE_WALL;           break;
-                case GFX_TREE:           tile = TILE_TREE;           break;
-                case GFX_RIVER:          tile = TILE_RIVER;          break;
-                case GFX_BRIDGE:         tile = TILE_BRIDGE;         break;
-                case GFX_ROAD:           tile = TILE_ROAD;           break;
-                case GFX_BUILDING_FLOOR: tile = TILE_BUILDING_FLOOR; break;
-                case GFX_HILLS:          tile = TILE_HILLS;          break;
-                case GFX_MOUNTAINS:      tile = TILE_MOUNTAINS;      break;
-                case GFX_CAVE_FLOOR:     tile = TILE_CAVE_FLOOR;     break;
-                case GFX_CAVE_WALL:      tile = TILE_CAVE_WALL;      break;
-                default: /* GFX_GRASS: select by loc */
-                    if      (IS_ENEMY_POOL(loc)) tile = TILE_ENEMY_POOLS[(loc - 1) % TILE_ENEMY_POOL_COUNT];
-                    else if (loc == LOC_TOWN)    tile = TILE_TOWN;
-                    else if (loc == LOC_DUNGEON) tile = TILE_DUNGEON;
-                    else if (IS_PORTAL(loc))     tile = TILE_PORTAL;
-                    else                         tile = TILE_GRASS;
+                case GFX_WALL:           img_idx = TIMG_WALL;       break;
+                case GFX_TREE:           img_idx = TIMG_TREE;       break;
+                case GFX_RIVER:          img_idx = TIMG_RIVER;      break;
+                case GFX_BRIDGE:         img_idx = TIMG_BRIDGE;     break;
+                case GFX_ROAD:           img_idx = TIMG_ROAD;       break;
+                case GFX_BUILDING_FLOOR: img_idx = TIMG_BLDG_FLOOR; break;
+                case GFX_HILLS:          img_idx = TIMG_HILLS;       break;
+                case GFX_MOUNTAINS:      img_idx = TIMG_MOUNTAINS;  break;
+                case GFX_CAVE_FLOOR:     img_idx = TIMG_CAVE_FLOOR; break;
+                case GFX_CAVE_WALL:      img_idx = TIMG_CAVE_WALL;   break;
+                case GFX_TAVERN_WALL:    img_idx = TIMG_TAVERN_WALL; break;
+                default:
+                    if      (IS_ENEMY_POOL(loc)) img_idx = TIMG_GRASS_ENEMY;
+                    else if (loc == LOC_TOWN)    img_idx = TIMG_GRASS_TOWN;
+                    else if (loc == LOC_DUNGEON) img_idx = TIMG_GRASS_DUNG;
+                    else if (IS_PORTAL(loc))     img_idx = TIMG_GRASS_PORT;
+                    else {
+                        static const int g_vars[] = { TIMG_GRASS, TIMG_GRASS_1, TIMG_GRASS_2 };
+                        img_idx = g_vars[tileHash(tx, ty, 3)];
+                    }
                     break;
             }
-            drawSprite8(x * TILE_SIZE - rCamX, y * TILE_SIZE - rCamY, tile, TILE_PAL, scale);
+
+            int rotate = 0;
+            if (img_idx == TIMG_GRASS || img_idx == TIMG_GRASS_1 || img_idx == TIMG_GRASS_2
+                    || img_idx == TIMG_ROAD)
+                rotate = tileHash(tx * 7 + 1, ty * 13 + 1, 4);
+
+            PakData *td = &g_tileImgs[img_idx];
+            if (td->data) {
+                int tileH  = (int)((const uint8_t *)td->data)[1];
+                int draw_y = cy + TILE_H - tileH * 2;
+                uint8_t alpha = 255;
+                if (sum > playerSum && !IS_GFX_PASSABLE(gfx)) {
+                    if (abs(cx - plrScreenX) < TILE_W / 2 + 16 && draw_y < plrScreenY + 16)
+                        alpha = 100;
+                }
+                drawBin(cx - TILE_W / 2, draw_y, (const uint8_t *)td->data, 2, rotate, alpha);
+            }
+
+            /* Draw NPCs and player inline at correct painter depth */
+            renderNpcs(tx, ty, rCamX, rCamY);
+            if (tx == worldPlayerX && ty == worldPlayerY) {
+                int px = cx + g_plrOffX;
+                int py = cy + g_plrOffY;
+                const uint8_t *spr = g_walkFrame ? SPRITE_PLAYER_2 : SPRITE_PLAYER;
+                drawSprite8(px - 16, py + TILE_H / 2 - 32, spr, TILE_PAL, 4);
+            }
         }
     }
-    renderNpcs(rCamX, rCamY);
-    const uint8_t *playerSprite = g_walkFrame ? SPRITE_PLAYER_2 : SPRITE_PLAYER;
-    drawSprite8(worldPlayerX * TILE_SIZE - rCamX + g_plrOffX,
-                worldPlayerY * TILE_SIZE - rCamY + g_plrOffY,
-                playerSprite, TILE_PAL, scale);
 }

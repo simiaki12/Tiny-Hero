@@ -143,18 +143,32 @@ static int bin_bits_needed(int n) {
     return b;
 }
 
-void drawBin(int x, int y, const uint8_t *data, int scale) {
+/* Returns 1 if (x,y) falls inside the tile diamond+walls for a tile of size w×h */
+static int tile_in_bounds(int x, int y, int w, int h) {
+    int dh = w/2, hdh = w/4, wh = h-dh, cx = w/2;
+    int r = y+1;
+    if (r >= 1 && r < dh) {
+        int span = (r <= hdh ? r : dh-r) * (w/hdh);
+        if (x >= cx-span/2 && x < cx+span/2) return 1;
+    }
+    if (wh > 0) {
+        if (x < cx) { int ty = hdh+x/2; if (y >= ty && y < ty+wh) return 1; }
+        else { int col=x-cx; int ty=dh-1-col/2; if (y >= ty && y < ty+wh) return 1; }
+    }
+    return 0;
+}
+
+void drawBin(int x, int y, const uint8_t *data, int scale, int rotate, uint8_t alpha) {
     if (!data) return;
-    int w            = data[0];
-    int h            = data[1];
-    int8_t cc        = (int8_t)data[2];
-    int n_colors;
+    int w       = data[0];
+    int h       = data[1];
+    int8_t cc   = (int8_t)data[2];
+    int n_colors, tile_mode = 0;
     uint32_t pal[127];
 
     const uint8_t *src = data + 3;
 
     if (cc < 0) {
-        /* Built-in palette */
         int id = (int)(-cc) - 1;
         if (id < 0 || id >= N_BUILTIN_PAL) return;
         n_colors = g_builtin_pal_size[id];
@@ -162,8 +176,12 @@ void drawBin(int x, int y, const uint8_t *data, int scale) {
             pal[ci] = rgb(g_builtin_pal[id][ci][0],
                           g_builtin_pal[id][ci][1],
                           g_builtin_pal[id][ci][2]);
+    } else if (cc == 0) {
+        tile_mode = 1;
+        n_colors  = (int)(*src++);
+        for (int ci = 0; ci < n_colors; ci++, src += 3)
+            pal[ci] = rgb(src[0], src[1], src[2]);
     } else {
-        /* Inline palette */
         n_colors = (int)cc;
         for (int ci = 0; ci < n_colors; ci++, src += 3)
             pal[ci] = rgb(src[0], src[1], src[2]);
@@ -172,18 +190,48 @@ void drawBin(int x, int y, const uint8_t *data, int scale) {
     int bpp  = bin_bits_needed(n_colors + 1);
     int mask = (1 << bpp) - 1;
 
+    /* Decode all pixels into a flat colour buffer; 0xFFFFFFFF = transparent.
+     * Needed so rotation can randomly access any source pixel. */
+    static uint32_t pixbuf[256 * 256];
     int bit_pos = 0;
     for (int row = 0; row < h; row++) {
         for (int col = 0; col < w; col++) {
-            /* Unpack next index MSB-first */
-            int val = 0;
-            for (int b = bpp - 1; b >= 0; b--) {
-                if ((src[bit_pos / 8] >> (7 - (bit_pos % 8))) & 1)
-                    val |= (1 << b);
-                bit_pos++;
+            int val;
+            if (tile_mode && !tile_in_bounds(col, row, w, h)) {
+                val = n_colors;
+            } else {
+                val = 0;
+                for (int b = bpp-1; b >= 0; b--) {
+                    if ((src[bit_pos/8] >> (7-(bit_pos%8))) & 1)
+                        val |= (1 << b);
+                    bit_pos++;
+                }
+                val &= mask;
             }
-            val &= mask;
-            if (val == n_colors) continue; /* transparent */
+            pixbuf[row * w + col] = (val == n_colors) ? 0xFFFFFFFFu : pal[val];
+        }
+    }
+
+    for (int row = 0; row < h; row++) {
+        for (int col = 0; col < w; col++) {
+            int sc, sr;
+            switch (rotate & 3) {
+                default:
+                case 0: sc = col;           sr = row;           break;
+                case 1: sc = 2 * row;       sr = (w-1-col) / 2; break; /* 90° CW  */
+                case 2: sc = w-1-col;       sr = h-1-row;       break; /* 180°    */
+                case 3: sc = (w-1)-2*row;   sr = col / 2;       break; /* 90° CCW */
+            }
+            if (sc < 0 || sc >= w) continue;
+            if (sr < 0) sr = 0;
+            if (sr >= h) sr = h - 1;
+            if (rotate && !tile_in_bounds(col, row, w, h)) continue;
+            uint32_t color = pixbuf[sr * w + sc];
+            if (color == 0xFFFFFFFFu && rotate) {
+                for (int fsr = sr - 1; fsr >= 0 && color == 0xFFFFFFFFu; fsr--)
+                    color = pixbuf[fsr * w + sc];
+            }
+            if (color == 0xFFFFFFFFu) continue;
 
             int px = x + col * scale;
             int py = y + row * scale;
@@ -191,10 +239,24 @@ void drawBin(int x, int y, const uint8_t *data, int scale) {
             int y1 = py < 0 ? 0 : py;
             int x2 = px + scale > gfxWidth  ? gfxWidth  : px + scale;
             int y2 = py + scale > gfxHeight ? gfxHeight : py + scale;
-            uint32_t color = pal[val];
-            for (int sy = y1; sy < y2; sy++)
-                for (int sx = x1; sx < x2; sx++)
-                    g_pixels[sy * gfxWidth + sx] = color;
+            if (alpha == 255) {
+                for (int sy = y1; sy < y2; sy++)
+                    for (int sx = x1; sx < x2; sx++)
+                        g_pixels[sy * gfxWidth + sx] = color;
+            } else {
+                uint8_t ia = 255 - alpha;
+                uint8_t cr = (color >> 16) & 0xFF;
+                uint8_t cg = (color >>  8) & 0xFF;
+                uint8_t cb =  color        & 0xFF;
+                for (int sy = y1; sy < y2; sy++)
+                    for (int sx = x1; sx < x2; sx++) {
+                        uint32_t bg = g_pixels[sy * gfxWidth + sx];
+                        uint8_t r = (cr * alpha + ((bg >> 16) & 0xFF) * ia) >> 8;
+                        uint8_t g = (cg * alpha + ((bg >>  8) & 0xFF) * ia) >> 8;
+                        uint8_t b = (cb * alpha + ( bg        & 0xFF) * ia) >> 8;
+                        g_pixels[sy * gfxWidth + sx] = ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+                    }
+            }
         }
     }
 }
@@ -254,6 +316,28 @@ void drawBW(const uint8_t *data, uint32_t size, uint32_t color) {
     int offY = (gfxHeight - dstH) / 2;
 
     drawBWAt(offX, offY, dstW, dstH, data, size, color,0xFFFFFF);
+}
+
+/* Isometric tile diamond: top vertex at (cx,cy), 64x32 px, optional wall face. */
+void drawIsoTile(int cx, int cy, uint32_t top, uint32_t side, int wall_h) {
+    /* iw=64, ih=32: span grows 4px/row to mid then shrinks symmetrically */
+    for (int row = 1; row <= 32; row++) {
+        int span = (row <= 16) ? row * 4 : (32 - row) * 4;
+        fillRect(cx - span / 2, cy + row - 1000, span, 1, top);
+    }
+    if (wall_h > 0) {
+        uint32_t dark = ((side >> 1) & 0x7F7F7Fu);
+        /* Left face: 32 columns, top edge traces bottom-left diamond edge */
+        for (int col = 0; col < 32; col++) {
+            int top_y = cy + 16 + col / 2;
+            fillRect(cx - 32 + col, top_y+1000, 1, wall_h, side);
+        }
+        /* Right face: 32 columns, top edge traces bottom-right diamond edge */
+        for (int col = 0; col < 32; col++) {
+            int top_y = cy + 32 - col / 2;
+            fillRect(cx + col, top_y+1000, 1, wall_h, dark);
+        }
+    }
 }
 
 void drawText(int x, int y, const char* text, uint32_t color, int scale) {

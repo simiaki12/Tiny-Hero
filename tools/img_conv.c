@@ -71,6 +71,21 @@ static const BuiltinPalette builtin_palettes[] = {
 };
 #define N_BUILTIN_PALETTES (int)(sizeof(builtin_palettes)/sizeof(builtin_palettes[0]))
 
+/* Returns 1 if (x,y) is inside the tile diamond+walls for a tile of size w×h */
+static int tile_in_bounds(int x, int y, int w, int h) {
+    int dh = w/2, hdh = w/4, wh = h-dh, cx = w/2;
+    int r = y+1;
+    if (r >= 1 && r < dh) {
+        int span = (r <= hdh ? r : dh-r) * (w/hdh);
+        if (x >= cx-span/2 && x < cx+span/2) return 1;
+    }
+    if (wh > 0) {
+        if (x < cx) { int ty = hdh+x/2; if (y >= ty && y < ty+wh) return 1; }
+        else { int col=x-cx; int ty=dh-1-col/2; if (y >= ty && y < ty+wh) return 1; }
+    }
+    return 0;
+}
+
 /* Returns pointer to built-in palette for id 1..N_BUILTIN_PALETTES, NULL if unknown */
 static const BuiltinPalette *get_builtin(int id) {
     if (id < 1 || id > N_BUILTIN_PALETTES) return NULL;
@@ -243,7 +258,8 @@ static void quantize(unsigned char *img, int total, int k,
 }
 
 static int do_encode(const char *in_path, const char *out_path, int target_colors,
-                     const char *preview_path, const int *seed_r, const int *seed_g, const int *seed_b) {
+                     const char *preview_path, const int *seed_r, const int *seed_g, const int *seed_b,
+                     int tile_mode) {
     int w, h, ch;
     unsigned char *img = stbi_load(in_path, &w, &h, &ch, 4);
     if (!img) {
@@ -339,16 +355,25 @@ static int do_encode(const char *in_path, const char *out_path, int target_color
     }
     stbi_image_free(img);
 
-    /* Pack indices MSB-first */
-    int bpp        = bits_needed(n_colors + 1); /* +1 for the transparent index */
-    int mask       = (1 << bpp) - 1;
-    int data_bytes = (total * bpp + 7) / 8;
+    /* Pack indices MSB-first; tile mode skips out-of-bounds pixels */
+    int bpp  = bits_needed(n_colors + 1);
+    int mask = (1 << bpp) - 1;
+
+    int n_packed = 0;
+    if (tile_mode) {
+        for (int i = 0; i < total; i++)
+            if (tile_in_bounds(i % w, i / w, w, h)) n_packed++;
+    } else {
+        n_packed = total;
+    }
+    int data_bytes = (n_packed * bpp + 7) / 8;
 
     uint8_t *packed = calloc(1, (size_t)data_bytes);
     if (!packed) { free(indices); return 1; }
 
     int bit_pos = 0;
     for (int i = 0; i < total; i++) {
+        if (tile_mode && !tile_in_bounds(i % w, i / w, w, h)) continue;
         int val = indices[i] & mask;
         for (int b = bpp - 1; b >= 0; b--) {
             if ((val >> b) & 1)
@@ -358,31 +383,41 @@ static int do_encode(const char *in_path, const char *out_path, int target_color
     }
     free(indices);
 
-    /* Write file: header + (palette if not built-in) + packed data */
+    /* Write file */
     FILE *f = fopen(out_path, "wb");
     if (!f) {
         fprintf(stderr, "failed to open output: %s\n", out_path);
         free(packed);
         return 1;
     }
-    /* color_count byte: positive = palette stored in file, negative = built-in id */
-    int8_t color_count_byte = builtin ? (int8_t)target_colors : (int8_t)n_colors;
-    uint8_t header[3] = { (uint8_t)w, (uint8_t)h, (uint8_t)color_count_byte };
-    fwrite(header, 1, 3, f);
-    if (!builtin) {
+    if (tile_mode) {
+        /* cc=0 signals tile-compressed; actual n_colors follows as 4th byte */
+        uint8_t hdr[4] = { (uint8_t)w, (uint8_t)h, 0, (uint8_t)n_colors };
+        fwrite(hdr, 1, 4, f);
         for (int ci = 0; ci < n_colors; ci++) {
             uint8_t rgb[3] = { pal_r[ci], pal_g[ci], pal_b[ci] };
             fwrite(rgb, 1, 3, f);
         }
+    } else {
+        int8_t color_count_byte = builtin ? (int8_t)target_colors : (int8_t)n_colors;
+        uint8_t hdr[3] = { (uint8_t)w, (uint8_t)h, (uint8_t)color_count_byte };
+        fwrite(hdr, 1, 3, f);
+        if (!builtin)
+            for (int ci = 0; ci < n_colors; ci++) {
+                uint8_t rgb[3] = { pal_r[ci], pal_g[ci], pal_b[ci] };
+                fwrite(rgb, 1, 3, f);
+            }
     }
     fwrite(packed, 1, (size_t)data_bytes, f);
     fclose(f);
     free(packed);
 
-    int palette_bytes = builtin ? 0 : n_colors * 3;
-    int total_bytes   = 3 + palette_bytes + data_bytes;
-    printf("encoded %s -> %s  [%dx%d, %d colors, %d bpp, %d bytes]\n",
-           in_path, out_path, w, h, n_colors, bpp, total_bytes);
+    int hdr_bytes     = tile_mode ? 4 : 3;
+    int palette_bytes = (tile_mode || !builtin) ? n_colors * 3 : 0;
+    int total_bytes   = hdr_bytes + palette_bytes + data_bytes;
+    printf("encoded %s -> %s  [%dx%d, %d colors, %d bpp, %d bytes%s]\n",
+           in_path, out_path, w, h, n_colors, bpp, total_bytes,
+           tile_mode ? ", tile-compressed" : "");
     printf("palette:\n");
     for (int ci = 0; ci < n_colors; ci++)
         printf("  %d: #%02x%02x%02x\n", ci, pal_r[ci], pal_g[ci], pal_b[ci]);
@@ -492,8 +527,16 @@ static int do_decode(const char *in_path, const char *out_path) {
 int main(int argc, char **argv) {
     if (argc == 4 && strcmp(argv[1], "-d") == 0)
         return do_decode(argv[2], argv[3]);
+
+    /* Check for -t (tile-compress) flag as first argument */
+    int tile_mode = 0;
+    if (argc >= 2 && strcmp(argv[1], "-t") == 0) {
+        tile_mode = 1;
+        argv++; argc--;  /* shift past -t */
+    }
+
     if (argc == 3 && argv[1][0] != '-')
-        return do_encode(argv[1], argv[2], 0, NULL, NULL, NULL, NULL);
+        return do_encode(argv[1], argv[2], 0, NULL, NULL, NULL, NULL, tile_mode);
     if (argc >= 4 && argv[1][0] != '-') {
         int k = atoi(argv[3]);
         if (k == 0 || k < -N_BUILTIN_PALETTES || k > 127) {
@@ -502,7 +545,6 @@ int main(int argc, char **argv) {
             return 1;
         }
 
-        /* Remaining args: optional preview path, then optional index:rrggbb seeds */
         const char *preview = NULL;
         int seed_r[127], seed_g[127], seed_b[127];
         for (int i = 0; i < 127; i++) seed_r[i] = seed_g[i] = seed_b[i] = -1;
@@ -524,18 +566,16 @@ int main(int argc, char **argv) {
                 return 1;
             }
         }
-        return do_encode(argv[1], argv[2], k, preview, seed_r, seed_g, seed_b);
+        return do_encode(argv[1], argv[2], k, preview, seed_r, seed_g, seed_b, tile_mode);
     }
 
     fprintf(stderr,
         "usage:\n"
         "  encode:          img_conv <in.png> <out.bin>\n"
-        "  encode+quantize: img_conv <in.png> <out.bin> <N> [preview.png] [idx:rrggbb ...]\n"
-        "                   N=1..127  pin palette slots with idx:rrggbb before k-means\n"
+        "  encode+tile:     img_conv -t <in.png> <out.til>  (skips transparent corners)\n"
+        "  encode+quantize: img_conv [-t] <in.png> <out> <N> [preview.png] [idx:rrggbb ...]\n"
         "  encode+built-in: img_conv <in.png> <out.bin> <-N> [preview.png]\n"
-        "                   N=1..%d, no palette stored in file\n"
-        "  decode:          img_conv -d <in.bin> <out.png>\n"
-        "built-in palettes: -1=Gameboy  -2=Grayscale4  -3=CGA\n",
-        N_BUILTIN_PALETTES);
+        "  decode:          img_conv -d <in.bin/til> <out.png>\n"
+        "built-in palettes: -1=Gameboy  -2=Grayscale4  -3=CGA\n");
     return 1;
 }

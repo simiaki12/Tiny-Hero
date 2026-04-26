@@ -3,6 +3,9 @@
 #include "pak.h"
 
 #define TILE_SIZE     64
+#define TILE_W        64          /* iso diamond screen width  */
+#define TILE_H        32          /* iso diamond screen height */
+#define WALL_H        TILE_H      /* wall front-face height    */
 #define MAX_MAP_TILES (256 * 256)
 
 /* mapGfx tile type constants */
@@ -17,6 +20,7 @@
 #define GFX_MOUNTAINS      8
 #define GFX_CAVE_FLOOR     9
 #define GFX_CAVE_WALL      10
+#define GFX_TAVERN_WALL    11
 
 #define IS_GFX_PASSABLE(g) ((g)==GFX_GRASS||(g)==GFX_BRIDGE||(g)==GFX_ROAD||(g)==GFX_BUILDING_FLOOR||(g)==GFX_HILLS||(g)==GFX_CAVE_FLOOR)
 

@@ -21,6 +21,7 @@
 #define GFX_MOUNTAINS      8
 #define GFX_CAVE_FLOOR     9
 #define GFX_CAVE_WALL      10
+#define GFX_TAVERN_WALL    11
 #define IS_GFX_PASSABLE(g) ((g)==GFX_GRASS||(g)==GFX_BRIDGE||(g)==GFX_ROAD||(g)==GFX_BUILDING_FLOOR||(g)==GFX_HILLS||(g)==GFX_CAVE_FLOOR)
 
 static uint8_t mapGfx[MAX_W * MAX_H];
@@ -178,6 +179,7 @@ static const char *gfxName(uint8_t gfx) {
         case GFX_MOUNTAINS:      return "mountains";
         case GFX_CAVE_FLOOR:     return "cave floor";
         case GFX_CAVE_WALL:      return "cave wall";
+        case GFX_TAVERN_WALL:    return "tavern wall";
         default:                 return "?";
     }
 }
@@ -215,6 +217,8 @@ static void drawMap(void) {
                         ch = ','; attr = COLOR_PAIR(4); break;
                     case GFX_CAVE_WALL:
                         ch = '%'; attr = COLOR_PAIR(4) | A_BOLD; break;
+                    case GFX_TAVERN_WALL:
+                        ch = '|'; attr = COLOR_PAIR(3) | A_BOLD; break;
                     default: /* GFX_GRASS — show loc overlay */
                         if (loc >= 1 && loc <= 15) {
                             ch = (loc <= 9) ? ('0' + loc) : ('A' + loc - 10);
@@ -280,10 +284,10 @@ int main(int argc, char *argv[]) {
             mvprintw(1, 0, "WARNING: '%s' not found — starting blank map", outfile);
             attroff(COLOR_PAIR(2));
         } else {
-            mvprintw(1, 0, "Arrows=move  W=wall  F=floor  A=tree  V=river  B=bridge  K=road  U=bldg  H=hills  M=mount  E=cavefloor  X=cavewall");
+            mvprintw(1, 0, "Arrows=move  W=wall  F=floor  A=tree  V=river  B=bridge  K=road  U=bldg  H=hills  M=mount  E=cavefloor  X=cavewall  Y=tavern");
             mvprintw(2, 0, "1-9=enemy  T=town  D=dungeon  R=portal  C=clear  P=spawn  S=save  O=open  N=new  Q=quit");
         }
-        mvprintw(!fileFound ? 2 : 3, 0, "Legend: #=wall ^=tree ~=river ==bridge :=road +=bldg n=hills M=mount ,=cavefloor %%=cavewall .=floor");
+        mvprintw(!fileFound ? 2 : 3, 0, "Legend: #=wall ^=tree ~=river ==bridge :=road +=bldg n=hills M=mount ,=cavefloor %%=cavewall |=tavern .=floor");
 
         drawMap();
         {
@@ -361,6 +365,10 @@ int main(int argc, char *argv[]) {
                 break;
             case 'x': case 'X':
                 mapGfx[idx] = GFX_CAVE_WALL; mapLoc[idx] = 0;
+                dirty = 1;
+                break;
+            case 'y': case 'Y':
+                mapGfx[idx] = GFX_TAVERN_WALL; mapLoc[idx] = 0;
                 dirty = 1;
                 break;
             case '1': case '2': case '3': case '4':

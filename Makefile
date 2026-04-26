@@ -32,10 +32,20 @@ release: pack $(RES)
 	$(CC) $(CFLAGS) $(RELEASEFLAGS) $(SRC) $(RES) -o $(OUT) $(LDFLAGS_STATIC) -s
 	ls -lh $(OUT)
 
+audio_demo:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/audio_demo.c -o build/audio_demo
+	./build/audio_demo
+
 gen_world_music:
 	mkdir -p build
 	$(CC_HOST) -std=c11 -Os tools/gen_world_music.c -o build/gen_world_music
 	./build/gen_world_music
+
+gen_iso_tiles:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/gen_iso_tiles.c -o build/gen_iso_tiles
+	./build/gen_iso_tiles
 
 packer:
 	mkdir -p build
@@ -99,6 +109,10 @@ img_conv:
 	mkdir -p build
 	$(CC_HOST) -std=c11 -Os tools/img_conv.c -o $(IMG_CONV) -lm
 
+img_conv_ui:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os -Wno-unused-result tools/img_conv_ui.c -o build/img_conv_ui -lncurses
+
 bw_conv:
 	mkdir -p build
 	$(CC_HOST) -std=c11 -Os tools/bw_conv.c -o $(BW_CONV) -lm
@@ -128,7 +142,7 @@ seed_npcs:
 	$(CC_HOST) -std=c11 -Os tools/seed_npcs.c -o build/seed_npcs
 	./build/seed_npcs
 
-tools: map_editor player_editor dialog_editor quest_editor item_editor loottable_editor enemy_editor npc_editor img_conv bw_conv rle
+tools: map_editor player_editor dialog_editor quest_editor item_editor loottable_editor enemy_editor npc_editor img_conv img_conv_ui bw_conv rle
 
 clean:
 	rm -rf build data.pak

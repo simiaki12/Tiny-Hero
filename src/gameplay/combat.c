@@ -334,7 +334,7 @@ void renderCombat(void) {
         if (scale < 1) scale = 1;
         int dx    = IMG_X + (IMG_SZ - iw * scale) / 2;
         int dy    = IMG_Y + (IMG_SZ - ih * scale) / 2;
-        drawBin(dx, dy, combat.enemyImg.data, scale);
+        drawBin(dx, dy, combat.enemyImg.data, scale, 0, 255);
     }
 
     char buf[48];
@@ -435,7 +435,7 @@ void renderCombat(void) {
             if (iscale < 1) iscale = 1;
             int ix = cx + (CARD_W - iw * iscale) / 2;
             int iy = CARD_Y + (IMG_AREA - ih * iscale) / 2;
-            drawBin(ix, iy, actionImgs[aid].data, iscale);
+            drawBin(ix, iy, actionImgs[aid].data, iscale, 0, 255);
         }
 
         const char *name  = adef->name;

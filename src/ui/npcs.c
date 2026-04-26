@@ -50,7 +50,7 @@ static void ensureImgsLoaded(void) {
     npcImgsLoaded = 1;
 }
 
-void renderNpcs(int rCamX, int rCamY) {
+void renderNpcs(int tx, int ty, int rCamX, int rCamY) {
     if (npcDefCount == 0) return;
     ensureImgsLoaded();
 
@@ -58,20 +58,17 @@ void renderNpcs(int rCamX, int rCamY) {
         const NpcDef *n = &npcDefs[i];
         if (!n->mapId[0]) continue;
         if (!strstr(currentMapName, n->mapId)) continue;
+        if ((int)n->x != tx || (int)n->y != ty) continue;
 
-        int sx = n->x * TILE_SIZE - rCamX;
-        int sy = n->y * TILE_SIZE - rCamY;
-
-        /* Skip NPCs outside the visible area */
-        if (sx + TILE_SIZE < 0 || sx > gfxWidth)  continue;
-        if (sy + TILE_SIZE < 0 || sy > gfxHeight) continue;
+        /* Iso screen position of this tile's top vertex */
+        int cx = (tx - ty) * (TILE_W / 2) - rCamX + gfxWidth  / 2;
+        int cy = (tx + ty) * (TILE_H / 2) - rCamY + gfxHeight / 2;
 
         if (npcImgs[i].data) {
-            int scale = TILE_SIZE / 8;
-            drawBin(sx, sy, (const uint8_t *)npcImgs[i].data, scale);
+            /* 8x8 sprite at scale 4 = 32x32, bottom-centred on tile face */
+            drawBin(cx - 16, cy + TILE_H / 2 - 32, (const uint8_t *)npcImgs[i].data, 4, 0, 255);
         } else {
-            /* Fallback: magenta square */
-            fillRect(sx + 8, sy + 8, TILE_SIZE - 16, TILE_SIZE - 16, rgb(200, 0, 200));
+            fillRect(cx - 6, cy + TILE_H / 2 - 14, 12, 14, rgb(200, 0, 200));
         }
     }
 }

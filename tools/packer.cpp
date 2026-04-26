@@ -28,13 +28,15 @@ int main() {
     /* Auto-discover all binaries under assets/ */
     std::vector<std::string> mapBins;
     if (fs::is_directory("assets")) {
-        for (auto &entry : fs::recursive_directory_iterator("assets"))
-            if (entry.path().extension() == ".bin")
+        for (auto &entry : fs::recursive_directory_iterator("assets")) {
+            auto ext = entry.path().extension();
+            if (ext == ".bin" || ext == ".til")
                 mapBins.push_back(normPath(entry.path().string()));
+        }
         std::sort(mapBins.begin(), mapBins.end());
     }
     if (mapBins.empty()) {
-        std::cerr << "No .bin files found in assets/\n";
+        std::cerr << "No .bin/.til files found in assets/\n";
         return 1;
     }
 
