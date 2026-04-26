@@ -15,21 +15,24 @@
 
 /* ── iso tile images, lazy-loaded on first render ── */
 #define TIMG_GRASS       0
-#define TIMG_GRASS_ENEMY 1
-#define TIMG_GRASS_TOWN  2
-#define TIMG_GRASS_DUNG  3
-#define TIMG_GRASS_PORT  4
-#define TIMG_RIVER       5
-#define TIMG_ROAD        6
-#define TIMG_BRIDGE      7
-#define TIMG_BLDG_FLOOR  8
-#define TIMG_CAVE_FLOOR  9
-#define TIMG_HILLS       10
-#define TIMG_WALL        11
-#define TIMG_CAVE_WALL   12
-#define TIMG_MOUNTAINS   13
-#define TIMG_TREE        14
-#define N_TILE_IMGS      15
+#define TIMG_GRASS_1     1
+#define TIMG_GRASS_2     2
+#define TIMG_GRASS_ENEMY 3
+#define TIMG_GRASS_TOWN  4
+#define TIMG_GRASS_DUNG  5
+#define TIMG_GRASS_PORT  6
+#define TIMG_RIVER       7
+#define TIMG_ROAD        8
+#define TIMG_BRIDGE      9
+#define TIMG_BLDG_FLOOR  10
+#define TIMG_CAVE_FLOOR  11
+#define TIMG_HILLS       12
+#define TIMG_WALL        13
+#define TIMG_CAVE_WALL   14
+#define TIMG_MOUNTAINS   15
+#define TIMG_TREE        16
+#define TIMG_TAVERN_WALL 17
+#define N_TILE_IMGS      18
 
 static PakData g_tileImgs[N_TILE_IMGS];
 static int     g_tilesLoaded = 0;
@@ -37,24 +40,33 @@ static int     g_tilesLoaded = 0;
 static void loadTileImgs(void) {
     static const char *paths[N_TILE_IMGS] = {
         "assets/tiles/grass.til",
-        "assets/tiles/grass_enemy.bin",
-        "assets/tiles/grass_town.bin",
+        "assets/tiles/grass_1.til",
+        "assets/tiles/grass_2.til",
+        "assets/tiles/enemy.til",
+        "assets/tiles/house.til",
         "assets/tiles/grass_dungeon.bin",
-        "assets/tiles/grass_portal.bin",
-        "assets/tiles/river.bin",
-        "assets/tiles/road.bin",
-        "assets/tiles/bridge.bin",
+        "assets/tiles/portal.til",
+        "assets/tiles/water.til",
+        "assets/tiles/road.til",
+        "assets/tiles/bridge.til",
         "assets/tiles/bldg_floor.bin",
-        "assets/tiles/cave_floor.bin",
+        "assets/tiles/cave.til",
         "assets/tiles/hills.bin",
-        "assets/tiles/wall.bin",
-        "assets/tiles/cave_wall.bin",
+        "assets/tiles/map_wall.til",
+        "assets/tiles/cave_wall.til",
         "assets/tiles/mountains.bin",
         "assets/tiles/tree.bin",
+        "assets/tiles/tavern_wall.til",
     };
     for (int i = 0; i < N_TILE_IMGS; i++)
         g_tileImgs[i] = pakRead(paths[i]);
     g_tilesLoaded = 1;
+}
+
+static int tileHash(int x, int y, int n) {
+    uint32_t h = (uint32_t)(x * 374761393u + y * 668265263u);
+    h ^= h >> 13; h *= 1274126177u; h ^= h >> 16;
+    return (int)(h % (uint32_t)n);
 }
 
 int     worldPlayerX  = 2;
@@ -274,6 +286,10 @@ void renderWorld(void) {
 
     fillRect(0, 0, gfxWidth, gfxHeight, rgb(10, 10, 15));
 
+    int playerSum  = worldPlayerX + worldPlayerY;
+    int plrScreenX = (worldPlayerX - worldPlayerY) * (TILE_W / 2) - rCamX + gfxWidth  / 2 + g_plrOffX;
+    int plrScreenY = (worldPlayerX + worldPlayerY) * (TILE_H / 2) - rCamY + gfxHeight / 2 + g_plrOffY;
+
     /* Painter's algorithm: draw back-to-front by ascending (tx+ty) sum */
     for (int sum = 0; sum < mapWidth + mapHeight - 1; sum++) {
         for (int tx = 0; tx <= sum; tx++) {
@@ -301,21 +317,35 @@ void renderWorld(void) {
                 case GFX_HILLS:          img_idx = TIMG_HILLS;       break;
                 case GFX_MOUNTAINS:      img_idx = TIMG_MOUNTAINS;  break;
                 case GFX_CAVE_FLOOR:     img_idx = TIMG_CAVE_FLOOR; break;
-                case GFX_CAVE_WALL:      img_idx = TIMG_CAVE_WALL;  break;
+                case GFX_CAVE_WALL:      img_idx = TIMG_CAVE_WALL;   break;
+                case GFX_TAVERN_WALL:    img_idx = TIMG_TAVERN_WALL; break;
                 default:
                     if      (IS_ENEMY_POOL(loc)) img_idx = TIMG_GRASS_ENEMY;
                     else if (loc == LOC_TOWN)    img_idx = TIMG_GRASS_TOWN;
                     else if (loc == LOC_DUNGEON) img_idx = TIMG_GRASS_DUNG;
                     else if (IS_PORTAL(loc))     img_idx = TIMG_GRASS_PORT;
-                    else                         img_idx = TIMG_GRASS;
+                    else {
+                        static const int g_vars[] = { TIMG_GRASS, TIMG_GRASS_1, TIMG_GRASS_2 };
+                        img_idx = g_vars[tileHash(tx, ty, 3)];
+                    }
                     break;
             }
 
+            int rotate = 0;
+            if (img_idx == TIMG_GRASS || img_idx == TIMG_GRASS_1 || img_idx == TIMG_GRASS_2
+                    || img_idx == TIMG_ROAD)
+                rotate = tileHash(tx * 7 + 1, ty * 13 + 1, 4);
+
             PakData *td = &g_tileImgs[img_idx];
             if (td->data) {
-                /* Shift tall tiles up so their wall base sits at ground level */
-                int draw_y = cy + TILE_H - (int)((const uint8_t *)td->data)[1] * 2;
-                drawBin(cx - TILE_W / 2, draw_y, (const uint8_t *)td->data, 2);
+                int tileH  = (int)((const uint8_t *)td->data)[1];
+                int draw_y = cy + TILE_H - tileH * 2;
+                uint8_t alpha = 255;
+                if (sum > playerSum && !IS_GFX_PASSABLE(gfx)) {
+                    if (abs(cx - plrScreenX) < TILE_W / 2 + 16 && draw_y < plrScreenY + 16)
+                        alpha = 100;
+                }
+                drawBin(cx - TILE_W / 2, draw_y, (const uint8_t *)td->data, 2, rotate, alpha);
             }
 
             /* Draw NPCs and player inline at correct painter depth */

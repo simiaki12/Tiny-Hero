@@ -66,7 +66,7 @@ void renderNpcs(int tx, int ty, int rCamX, int rCamY) {
 
         if (npcImgs[i].data) {
             /* 8x8 sprite at scale 4 = 32x32, bottom-centred on tile face */
-            drawBin(cx - 16, cy + TILE_H / 2 - 32, (const uint8_t *)npcImgs[i].data, 4);
+            drawBin(cx - 16, cy + TILE_H / 2 - 32, (const uint8_t *)npcImgs[i].data, 4, 0, 255);
         } else {
             fillRect(cx - 6, cy + TILE_H / 2 - 14, 12, 14, rgb(200, 0, 200));
         }

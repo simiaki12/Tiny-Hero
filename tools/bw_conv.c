@@ -28,7 +28,7 @@
 static uint8_t to_bit(unsigned char r, unsigned char g, unsigned char b, unsigned char a) {
     if (a == 0) return 0; /* transparent → white */
     int lum = ((int)r * 299 + (int)g * 587 + (int)b * 114) / 1000;
-    return lum < 128 ? 1 : 0;
+    return lum < 64 ? 1 : 0;
 }
 
 /* Write a run of `count` pixels of `bit` into the RLE stream.

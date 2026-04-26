@@ -20,6 +20,7 @@
 #define GFX_MOUNTAINS      8
 #define GFX_CAVE_FLOOR     9
 #define GFX_CAVE_WALL      10
+#define GFX_TAVERN_WALL    11
 
 #define IS_GFX_PASSABLE(g) ((g)==GFX_GRASS||(g)==GFX_BRIDGE||(g)==GFX_ROAD||(g)==GFX_BUILDING_FLOOR||(g)==GFX_HILLS||(g)==GFX_CAVE_FLOOR)
 

@@ -61,6 +61,25 @@ void renderLoading(void) {
     drawBW(g_loadingImg.data, g_loadingImg.size, rgb(0, 0, 0));
 }
 
+/* --- Animated background --- */
+
+#define BG_FRAMES 8
+#define BG_MS     140
+
+static PakData g_bgFrames[BG_FRAMES];
+static int     g_bgLoaded   = 0;
+static int     g_bgFrame    = 0;
+static DWORD   g_bgNextTick = 0;
+
+static void loadBgFrames(void) {
+    char path[48];
+    for (int i = 0; i < BG_FRAMES; i++) {
+        snprintf(path, sizeof(path), "assets/ui/main%d.bin", i + 1);
+        g_bgFrames[i] = pakRead(path);
+    }
+    g_bgLoaded = 1;
+}
+
 /* --- Top-level menu --- */
 
 static int g_sel = 0;
@@ -161,12 +180,25 @@ void handleMainMenuInput(int key) {
 void renderMainMenu(void) {
     if (g_inBrowser) { renderBrowser(); return; }
 
-    /* TODO: animated warrior GIF behind options */
+    if (!g_bgLoaded) loadBgFrames();
+
+    DWORD now = GetTickCount();
+    if (now >= g_bgNextTick) {
+        g_bgFrame    = (g_bgFrame + 1) % BG_FRAMES;
+        g_bgNextTick = now + BG_MS;
+    }
+
     const int cx     = gfxWidth  / 2;
     const int lineH  = 24;
     const int startY = gfxHeight / 2 - (MENU_ITEMS * lineH) / 2;
 
     fillRect(0, 0, gfxWidth, gfxHeight, rgb(0, 0, 0));
+
+    PakData *frame = &g_bgFrames[g_bgFrame];
+    if (frame->data)
+        drawBWAt(0, 0, gfxWidth, gfxHeight, frame->data, frame->size,
+                 rgb(0,0,0), rgb(120,50,50));
+
     if (!g_logoImg.data) g_logoImg = pakRead("assets/ui/logo.bin");
     drawBWAt(cx - 120, startY - 48, 240, 48, g_logoImg.data, g_logoImg.size, rgb(255, 0, 0), rgb(0,0,0));
 //    drawText(cx - 72, startY - 48, "TINY HERO", rgb(220, 220, 255), 2);
