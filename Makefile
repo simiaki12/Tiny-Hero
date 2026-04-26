@@ -32,6 +32,11 @@ release: pack $(RES)
 	$(CC) $(CFLAGS) $(RELEASEFLAGS) $(SRC) $(RES) -o $(OUT) $(LDFLAGS_STATIC) -s
 	ls -lh $(OUT)
 
+audio_demo:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os tools/audio_demo.c -o build/audio_demo
+	./build/audio_demo
+
 gen_world_music:
 	mkdir -p build
 	$(CC_HOST) -std=c11 -Os tools/gen_world_music.c -o build/gen_world_music
