@@ -142,7 +142,11 @@ seed_npcs:
 	$(CC_HOST) -std=c11 -Os tools/seed_npcs.c -o build/seed_npcs
 	./build/seed_npcs
 
-tools: map_editor player_editor dialog_editor quest_editor item_editor loottable_editor enemy_editor npc_editor img_conv img_conv_ui bw_conv rle
+music_editor:
+	mkdir -p build
+	$(CC_HOST) -std=c11 -Os -Wno-unused-result tools/music_editor.c -o build/music_editor -lncurses
+
+tools: map_editor player_editor dialog_editor quest_editor item_editor loottable_editor enemy_editor npc_editor img_conv img_conv_ui bw_conv rle music_editor
 
 clean:
 	rm -rf build data.pak
